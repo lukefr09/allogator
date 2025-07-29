@@ -47,6 +47,7 @@ const PortfolioRebalancer = () => {
   const [priceError, setPriceError] = useState<string | undefined>();
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [showShareSuccess, setShowShareSuccess] = useState(false);
+  const [showSharesInAllocation, setShowSharesInAllocation] = useState(false);
   const [disambiguationDialog, setDisambiguationDialog] = useState<{
     index: number;
     symbol: string;
@@ -454,17 +455,30 @@ const PortfolioRebalancer = () => {
               {validationErrors.length === 0 && allocations.length > 0 && (
                 <>
                   <GlassCard variant="light" padding="lg" animate allowOverflow={true}>
-                    <h2 className="text-xl font-semibold text-gray-100 mb-4 relative">
-                      How to Allocate <AnimatedNumber value={newMoney} prefix="$" className="text-emerald-400" />
-                      <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
-                        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
-                          Recommended amounts to invest in each asset<br/>to maintain your target allocation
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-gray-100 relative">
+                        How to Allocate <AnimatedNumber value={newMoney} prefix="$" className="text-emerald-400" />
+                        <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
+                          <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                            Recommended amounts to invest in each asset<br/>to maintain your target allocation
+                          </span>
                         </span>
-                      </span>
-                    </h2>
+                      </h2>
+                      <button
+                        onClick={() => setShowSharesInAllocation(!showSharesInAllocation)}
+                        className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative group/tooltip"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                          {showSharesInAllocation ? 'Hide' : 'Show'} share quantities
+                        </span>
+                      </button>
+                    </div>
                     <div className="space-y-3">
                       {isLoadingPrices && allocations.length === 0 ? (
                         <>
@@ -482,20 +496,34 @@ const PortfolioRebalancer = () => {
                           </div>
                         </>
                       ) : (
-                        allocations.map((allocation, index) => (
-                          <div
-                            key={allocation.symbol}
-                            className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
-                            style={{ animationDelay: `${index * 50}ms` }}
-                          >
-                            <span className="font-medium text-gray-200">{getDisplayName(allocation.symbol)}</span>
-                            <AnimatedNumber
-                              value={allocation.amountToAdd}
-                              prefix="$"
-                              className="text-emerald-400 font-semibold"
-                            />
-                          </div>
-                        ))
+                        allocations.map((allocation, index) => {
+                          const asset = assets.find(a => a.symbol === allocation.symbol);
+                          const sharesToBuy = asset?.currentPrice && asset.currentPrice > 0 
+                            ? allocation.amountToAdd / asset.currentPrice 
+                            : null;
+                          
+                          return (
+                            <div
+                              key={allocation.symbol}
+                              className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
+                              style={{ animationDelay: `${index * 50}ms` }}
+                            >
+                              <span className="font-medium text-gray-200">{getDisplayName(allocation.symbol)}</span>
+                              <div className="flex items-center gap-2">
+                                <AnimatedNumber
+                                  value={allocation.amountToAdd}
+                                  prefix="$"
+                                  className="text-emerald-400 font-semibold"
+                                />
+                                {showSharesInAllocation && sharesToBuy !== null && (
+                                  <span className="text-gray-500 text-sm">
+                                    ({sharesToBuy < 1 ? sharesToBuy.toFixed(4) : sharesToBuy.toFixed(2)} shares)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
                       <div className="flex justify-between items-center pt-4 mt-4 border-t border-white/10">
                         <span className="font-bold text-gray-100">Total</span>
