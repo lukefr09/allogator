@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Asset, AllocationResult, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
@@ -247,6 +247,74 @@ const PortfolioRebalancer = () => {
   const currentTotal = useMemo(() => assets.reduce((sum, asset) => sum + asset.currentValue, 0), [assets]);
   const newTotal = useMemo(() => currentTotal + newMoney, [currentTotal, newMoney]);
   
+  // State for animated gradient color
+  const [gradientColor, setGradientColor] = useState({ r: 16, g: 185, b: 129 });
+  const animationFrameRef = useRef<number>();
+  
+  // Calculate target allocation quality color
+  const targetColor = useMemo(() => {
+    if (allocations.length === 0) return { r: 16, g: 185, b: 129 }; // Default to green
+    
+    const totalDifference = allocations.reduce((sum, allocation) => {
+      return sum + Math.abs(allocation.difference);
+    }, 0);
+    
+    const avgDifference = totalDifference / allocations.length;
+    
+    // Smooth color transition based on average difference
+    // 0% = green, 1.75% = yellow, 3.5%+ = red
+    if (avgDifference <= 1.75) {
+      // Green to yellow transition
+      const t = avgDifference / 1.75;
+      return {
+        r: Math.round(16 + (251 - 16) * t),
+        g: Math.round(185 + (191 - 185) * t),
+        b: Math.round(129 + (36 - 129) * t)
+      };
+    } else {
+      // Yellow to red transition
+      const t = Math.min((avgDifference - 1.75) / 1.75, 1);
+      return {
+        r: Math.round(251 + (239 - 251) * t),
+        g: Math.round(191 + (68 - 191) * t),
+        b: Math.round(36 + (68 - 36) * t)
+      };
+    }
+  }, [allocations]);
+  
+  // Animate color transition
+  useEffect(() => {
+    const animate = () => {
+      setGradientColor(current => {
+        const dr = targetColor.r - current.r;
+        const dg = targetColor.g - current.g;
+        const db = targetColor.b - current.b;
+        
+        // If close enough, snap to target
+        if (Math.abs(dr) < 1 && Math.abs(dg) < 1 && Math.abs(db) < 1) {
+          return targetColor;
+        }
+        
+        // Otherwise, move towards target (slower transition)
+        return {
+          r: current.r + dr * 0.02,
+          g: current.g + dg * 0.02,
+          b: current.b + db * 0.02
+        };
+      });
+      
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [targetColor]);
+  
   const handleShare = useCallback(async () => {
     const url = encodePortfolioToUrl(assets, newMoney);
     const success = await copyToClipboard(url);
@@ -401,9 +469,30 @@ const PortfolioRebalancer = () => {
   
   return (
     <>
+      {/* Subtle gradient indicator in bottom right */}
+      <div 
+        className="fixed bottom-0 right-0 pointer-events-none"
+        style={{
+          width: '100%',
+          height: '100%',
+          background: `radial-gradient(ellipse 80% 80% at 90% 90%, 
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.08) 0%, 
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.06) 10%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.045) 20%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.035) 30%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.025) 40%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.015) 50%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.008) 60%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.004) 70%,
+            rgba(${Math.round(gradientColor.r)}, ${Math.round(gradientColor.g)}, ${Math.round(gradientColor.b)}, 0.002) 80%,
+            rgba(0, 0, 0, 0) 90%)`,
+          zIndex: 1
+        }}
+      />
+      
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="min-h-screen pt-40 sm:pt-32 pb-8">
+      <div className="min-h-screen pt-40 sm:pt-32 pb-8 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           
           {/* Main Content Grid */}
