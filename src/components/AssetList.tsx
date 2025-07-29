@@ -12,6 +12,8 @@ interface AssetListProps {
   lastPriceUpdate?: string;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  priceError?: string;
+  isLoadingPrices?: boolean;
 }
 
 const AssetList: React.FC<AssetListProps> = ({ 
@@ -22,7 +24,9 @@ const AssetList: React.FC<AssetListProps> = ({
   onRefreshPrices,
   lastPriceUpdate,
   viewMode,
-  onViewModeChange
+  onViewModeChange,
+  priceError,
+  isLoadingPrices = false
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [manualPriceIndex, setManualPriceIndex] = useState<number | null>(null);
@@ -52,6 +56,15 @@ const AssetList: React.FC<AssetListProps> = ({
         </div>
       </div>
       
+      {priceError && (
+        <div className="glass-light border-yellow-500/20 px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="text-yellow-400 text-sm">{priceError}</span>
+        </div>
+      )}
+      
       {lastPriceUpdate && (
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
           <span>Prices last updated: {new Date(lastPriceUpdate).toLocaleString()}</span>
@@ -62,12 +75,12 @@ const AssetList: React.FC<AssetListProps> = ({
                 await onRefreshPrices();
                 setIsRefreshing(false);
               }}
-              disabled={isRefreshing}
+              disabled={isRefreshing || isLoadingPrices}
               className="p-1 hover:bg-gray-700 rounded transition-colors duration-200"
-              title="Refresh prices"
+              title={isLoadingPrices ? "Loading prices..." : "Refresh prices"}
             >
               <svg 
-                className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} 
+                className={`w-3 h-3 ${isRefreshing || isLoadingPrices ? 'animate-spin' : ''}`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -99,14 +112,27 @@ const AssetList: React.FC<AssetListProps> = ({
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <div className="flex gap-4 items-start">
-              {/* Symbol Input */}
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Symbol</label>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              {/* Top Row on Mobile: Symbol and Value/Shares */}
+              <div className="flex gap-3 sm:contents">
+                {/* Symbol Input */}
+                <div className="flex-1 sm:flex-initial">
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Symbol</label>
                 <input
                   type="text"
-                  value={asset.symbol}
-                  onChange={(e) => onUpdateAsset(index, 'symbol', e.target.value.toUpperCase())}
+                  defaultValue={asset.symbol}
+                  key={`symbol-${index}-${asset.symbol}`} // Force re-render when symbol changes externally
+                  onBlur={(e) => {
+                    const newSymbol = e.target.value.toUpperCase();
+                    if (newSymbol !== asset.symbol) {
+                      onUpdateAsset(index, 'symbol', newSymbol);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur(); // Trigger blur to save
+                    }
+                  }}
                   className="glass-input w-full font-semibold text-lg tabular-nums"
                   placeholder="AAPL"
                 />
@@ -161,11 +187,11 @@ const AssetList: React.FC<AssetListProps> = ({
                       )}
                     </>
                   )}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Current Value/Shares Input */}
-              <div className="w-44">
+                
+                {/* Current Value/Shares Input */}
+                <div className="flex-1 sm:flex-initial sm:w-44">
                 {viewMode === 'money' ? (
                   <>
                     <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Value</label>
@@ -263,11 +289,17 @@ const AssetList: React.FC<AssetListProps> = ({
                     </div>
                   </>
                 )}
+                </div>
               </div>
               
-              {/* Target Percentage Input */}
-              <div className="w-32 self-start">
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Target %</label>
+              {/* Bottom Row on Mobile: Target % and Remove Button */}
+              <div className="flex gap-3 sm:contents">
+                {/* Target Percentage Input */}
+                <div className="flex-1 sm:flex-initial sm:w-32">
+                <label className="block text-xs font-medium text-gray-400 mb-1.5" title="The percentage of your total portfolio you want this asset to represent">
+                  Target %
+                  <span className="ml-1 text-gray-500" title="The percentage of your total portfolio you want this asset to represent">ⓘ</span>
+                </label>
                 <div className="relative">
                   <input
                     type="number"
@@ -295,14 +327,14 @@ const AssetList: React.FC<AssetListProps> = ({
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
                 </div>
-              </div>
-              
-              {/* Remove Button */}
-              <div className="pt-6">
+                </div>
+                
+                {/* Remove Button */}
+                <div className="flex items-end sm:items-center sm:pt-0">
                 <button
                   onClick={() => onRemoveAsset(index)}
                   className={`
-                    p-2.5 rounded-lg transition-all duration-200
+                    p-2.5 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px]
                     ${assets.length <= 2 
                       ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
                       : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-110 active:scale-95'
@@ -314,7 +346,8 @@ const AssetList: React.FC<AssetListProps> = ({
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </button>
+                  </button>
+                </div>
               </div>
             </div>
             

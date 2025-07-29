@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Asset, AllocationResult, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
@@ -22,6 +22,8 @@ const PortfolioRebalancer = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('money');
+  const [priceError, setPriceError] = useState<string | undefined>();
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   
   const totalPercentage = calculateTotalPercentage(assets);
   
@@ -77,15 +79,50 @@ const PortfolioRebalancer = () => {
     }
   };
   
-  const handleUpdateAsset = (index: number, field: keyof Asset, value: number | string) => {
+  const handleUpdateAsset = async (index: number, field: keyof Asset, value: number | string) => {
     const updated = [...assets];
     if (field === 'symbol') {
+      const oldSymbol = updated[index].symbol;
       updated[index].symbol = value as string;
-      // Clear price and share data when symbol changes
-      updated[index].currentPrice = undefined;
-      updated[index].lastUpdated = undefined;
-      updated[index].priceSource = undefined;
-      updated[index].shares = undefined;
+      
+      // If symbol changed and is not empty, fetch price
+      if (oldSymbol !== value && (value as string).trim() !== '') {
+        setIsLoadingPrices(true);
+        setPriceError(undefined);
+        
+        try {
+          const priceData = await priceService.fetchPrice(value as string);
+          if (priceData) {
+            updated[index].currentPrice = priceData.price;
+            updated[index].lastUpdated = priceData.timestamp;
+            updated[index].priceSource = 'api';
+            
+            // Update shares if we have a current value
+            if (updated[index].currentValue > 0 && priceData.price > 0) {
+              updated[index].shares = updated[index].currentValue / priceData.price;
+            }
+            
+            setLastPriceUpdate(new Date().toISOString());
+          } else {
+            // Clear price data if fetch failed
+            updated[index].currentPrice = undefined;
+            updated[index].lastUpdated = undefined;
+            updated[index].priceSource = undefined;
+            updated[index].shares = undefined;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch price for ${value}:`, error);
+          setPriceError(`Unable to fetch price for ${value}. Enter price manually.`);
+        } finally {
+          setIsLoadingPrices(false);
+        }
+      } else if ((value as string).trim() === '') {
+        // Clear price data when symbol is empty
+        updated[index].currentPrice = undefined;
+        updated[index].lastUpdated = undefined;
+        updated[index].priceSource = undefined;
+        updated[index].shares = undefined;
+      }
     } else if (field === 'currentValue') {
       updated[index].currentValue = value as number;
       // Only update shares from value if we don't already have shares (i.e., in money mode)
@@ -127,6 +164,47 @@ const PortfolioRebalancer = () => {
   
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
+  const isEmpty = currentTotal === 0;
+  
+  const handleLoadExample = async () => {
+    const exampleAssets: Asset[] = [
+      { symbol: 'VOO', currentValue: 600, targetPercentage: 0.50 },
+      { symbol: 'QQQ', currentValue: 300, targetPercentage: 0.30 },
+      { symbol: 'NVDA', currentValue: 100, targetPercentage: 0.20 }
+    ];
+    setAssets(exampleAssets);
+    
+    // Fetch prices for example assets
+    setIsLoadingPrices(true);
+    setPriceError(undefined);
+    
+    try {
+      const symbols = exampleAssets.map(asset => asset.symbol);
+      const priceData = await priceService.fetchMultiplePrices(symbols);
+      
+      const updatedAssets = exampleAssets.map(asset => {
+        const data = priceData.get(asset.symbol);
+        if (data) {
+          return {
+            ...asset,
+            currentPrice: data.price,
+            lastUpdated: data.timestamp,
+            priceSource: 'api' as const,
+            shares: asset.currentValue / data.price
+          };
+        }
+        return asset;
+      });
+      
+      setAssets(updatedAssets);
+      setLastPriceUpdate(new Date().toISOString());
+    } catch (error) {
+      console.error('Failed to fetch prices for example:', error);
+      setPriceError('Unable to fetch prices. Please enter them manually.');
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  };
   
   
   const handleRefreshPrices = async () => {
@@ -134,7 +212,11 @@ const PortfolioRebalancer = () => {
     
     if (symbols.length === 0) return;
     
-    const priceData = await priceService.fetchMultiplePrices(symbols);
+    setIsLoadingPrices(true);
+    setPriceError(undefined);
+    
+    try {
+      const priceData = await priceService.fetchMultiplePrices(symbols);
     
     const updatedAssets = assets.map(asset => {
       const data = priceData.get(asset.symbol);
@@ -160,19 +242,31 @@ const PortfolioRebalancer = () => {
       return asset;
     });
     
-    setAssets(updatedAssets);
-    setLastPriceUpdate(new Date().toISOString());
+      const failedSymbols = symbols.filter(symbol => !priceData.get(symbol));
+      
+      if (failedSymbols.length > 0) {
+        setPriceError(`Unable to fetch prices for: ${failedSymbols.join(', ')}. Enter prices manually.`);
+      }
+      
+      setAssets(updatedAssets);
+      setLastPriceUpdate(new Date().toISOString());
+    } catch (error) {
+      setPriceError('Unable to fetch prices. Please enter them manually.');
+      console.error('Price fetch error:', error);
+    } finally {
+      setIsLoadingPrices(false);
+    }
   };
   
   return (
     <>
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="min-h-screen pt-36 pb-12 px-6">
+      <div className="min-h-screen pt-24 sm:pt-32 pb-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           
           {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Left Column - Portfolio Management */}
             <div className="lg:col-span-2 space-y-6">
               {/* Asset List */}
@@ -185,6 +279,8 @@ const PortfolioRebalancer = () => {
                 lastPriceUpdate={lastPriceUpdate}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
+                priceError={priceError}
+                isLoadingPrices={isLoadingPrices}
               />
               
               <AddAsset
@@ -195,6 +291,25 @@ const PortfolioRebalancer = () => {
             
             {/* Right Column - Calculations */}
             <div className="space-y-6">
+              {/* Empty State Message */}
+              {isEmpty && validationErrors.length === 0 && (
+                <GlassCard variant="light" padding="lg" animate>
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-gray-100 mb-3">
+                      Welcome to Portfolio Rebalancer!
+                    </h3>
+                    <p className="text-gray-300 mb-6">
+                      Add your current holdings or start fresh with ${newMoney}
+                    </p>
+                    <button
+                      onClick={handleLoadExample}
+                      className="px-6 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-medium rounded-lg transition-colors duration-200"
+                    >
+                      Load Example Portfolio
+                    </button>
+                  </div>
+                </GlassCard>
+              )}
               {/* Validation Errors */}
               {validationErrors.length > 0 && (
                 <GlassCard variant="default" padding="md" className="border-red-500/20">
@@ -320,6 +435,11 @@ const PortfolioRebalancer = () => {
               )}
             </div>
           </div>
+          
+          {/* Footer */}
+          <footer className="mt-16 text-center text-xs text-gray-500">
+            <p>Made by Luke</p>
+          </footer>
         </div>
       </div>
     </>

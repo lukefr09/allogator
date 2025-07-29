@@ -9,25 +9,25 @@ const Header: React.FC<HeaderProps> = ({ newMoney, onNewMoneyChange }) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
       <div className="max-w-7xl mx-auto">
-        <div className="glass border-white/10 px-6 py-5 rounded-2xl">
-          <div className="flex items-center justify-between">
+        <div className="glass border-white/10 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {/* Logo/Brand */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center shadow-lg animate-float">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 bg-gradient-to-br from-blue-600 to-blue-400 rounded-xl flex items-center justify-center shadow-lg animate-float">
+                <svg className="w-5 sm:w-6 h-5 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-100">Portfolio Rebalancer</h1>
-                <p className="text-xs text-gray-400">Optimize your investment allocations with precision</p>
+                <h1 className="text-lg sm:text-xl font-bold text-gray-100">Portfolio Rebalancer</h1>
+                <p className="text-xs text-gray-400 hidden sm:block">Optimize your investment allocations with precision</p>
               </div>
             </div>
             
             {/* New Money Input */}
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-semibold text-gray-300">New Money to Invest</label>
-              <div className="relative">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <label className="text-xs sm:text-sm font-semibold text-gray-300 whitespace-nowrap">New Money</label>
+              <div className="relative flex-1 sm:flex-initial">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                 <input
                   type="number"
@@ -42,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({ newMoney, onNewMoneyChange }) => {
                       onNewMoneyChange(1000000);
                     }
                   }}
-                  className="glass-input w-40 pl-8 text-base font-semibold tabular-nums"
+                  className="glass-input w-full sm:w-40 pl-8 text-base font-semibold tabular-nums"
                   step="0.01"
                   min="0.01"
                   max="1000000"
