@@ -1,8 +1,47 @@
 # Allogator 🐊
 
+<p align="center">
+  <a href="https://allogator.vercel.app">Live Demo</a> •
+  <a href="#features">Features</a> •
+  <a href="#getting-started">Get Started</a> •
+  <a href="https://github.com/lukefr09">Built by Luke</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-blue" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue" />
+  <img src="https://img.shields.io/badge/License-MIT-green" />
+</p>
+
+![Allogator Screenshot](./screenshot.png)
+
 **Optimize your investment allocations with precision**
 
 A modern, real-time portfolio rebalancing calculator that helps you make informed investment decisions. Built with React and TypeScript, featuring live price data integration and smart allocation algorithms.
+
+## 🤔 Why Allogator?
+
+Manually calculating how to rebalance your portfolio is tedious and error-prone. Existing tools are either too complex, require account connections, or cost money. Allogator solves this by providing:
+
+- **No Sign-up Required**: Just open and start using
+- **Privacy First**: All calculations happen in your browser
+- **Real-time Prices**: Live market data for informed decisions
+- **Precise Allocations**: Down to the cent accuracy
+- **Free Forever**: Open source and self-hostable
+
+## 💡 Example Use Case
+
+You have a portfolio worth $3,000:
+- VOO: $1,800 (60%) - Target: 50%
+- QQQ: $900 (30%) - Target: 30%  
+- NVDA: $300 (10%) - Target: 20%
+
+With $1,000 to invest, Allogator calculates:
+- VOO: $0 (already overweight)
+- QQQ: $400 (to maintain 30%)
+- NVDA: $600 (to reach 20%)
+
+Perfect allocation every time! 🎯
 
 ## ✨ Features
 
@@ -49,8 +88,8 @@ A modern, real-time portfolio rebalancing calculator that helps you make informe
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/portfolio-rebalancer.git
-   cd portfolio-rebalancer
+   git clone https://github.com/lukefr09/allogator.git
+   cd allogator
    ```
 
 2. **Install dependencies**
@@ -148,6 +187,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Finnhub.io](https://finnhub.io) for financial data API
 - [Tailwind CSS](https://tailwindcss.com) for styling framework
 - [Vite](https://vitejs.dev) for build tooling
+
+## 🚀 About
+
+Built by [Luke](https://github.com/lukefr09) - a 16-year-old developer and investor who needed a better way to rebalance his portfolio every month.
+
+This tool went from idea to production in under 2 hours. Now used by investors worldwide for precise portfolio management!
+
+### Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=lukefr09/allogator&type=Date)](https://star-history.com/#lukefr09/allogator&Date)
 
 ---
 
