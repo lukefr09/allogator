@@ -192,7 +192,8 @@ const PortfolioRebalancer = () => {
           }
         } catch (error) {
           console.error(`Failed to fetch price for ${value}:`, error);
-          setPriceError(`Unable to fetch price for ${value}. Enter price manually.`);
+          const errorMessage = error instanceof Error ? error.message : `Unable to fetch price for ${value}. Enter price manually.`;
+          setPriceError(errorMessage);
         } finally {
           setIsLoadingPrices(false);
         }
@@ -384,7 +385,8 @@ const PortfolioRebalancer = () => {
           }
         } catch (error) {
           console.error(`Failed to fetch price for ${finalSymbol}:`, error);
-          setPriceError(`Unable to fetch price for ${finalSymbol}. Enter price manually.`);
+          const errorMessage = error instanceof Error ? error.message : `Unable to fetch price for ${finalSymbol}. Enter price manually.`;
+          setPriceError(errorMessage);
         } finally {
           setIsLoadingPrices(false);
         }
