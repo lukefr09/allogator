@@ -36,7 +36,7 @@ const AssetList: React.FC<AssetListProps> = ({
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
 
   return (
-    <GlassCard variant="dark" padding="lg" className="mb-8">
+    <GlassCard variant="dark" padding="lg" className="mb-8" allowOverflow={true}>
       {/* Header */}
       <div className="flex justify-between items-center mb-6 relative z-20">
         <div>
@@ -117,7 +117,7 @@ const AssetList: React.FC<AssetListProps> = ({
               {/* Top Row on Mobile: Symbol and Value/Shares */}
               <div className="flex gap-3 sm:contents">
                 {/* Symbol Input */}
-                <div className="flex-1 sm:flex-initial">
+                <div className="flex-1 sm:flex-initial overflow-visible">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5">Symbol</label>
                 <input
                   type="text"
@@ -137,7 +137,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   className="glass-input w-full font-semibold text-lg tabular-nums"
                   placeholder="AAPL"
                 />
-                <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between relative z-50">
+                <div className="mt-2 text-xs text-gray-500 flex items-center justify-between relative" style={{zIndex: 999}}>
                   {asset.currentPrice && (
                     <>
                       <div>
@@ -192,7 +192,7 @@ const AssetList: React.FC<AssetListProps> = ({
                 </div>
                 
                 {/* Current Value/Shares Input */}
-                <div className="flex-1 sm:flex-initial sm:w-44">
+                <div className="flex-1 sm:flex-initial sm:w-44 overflow-visible">
                 {viewMode === 'money' ? (
                   <>
                     <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Value</label>
@@ -222,7 +222,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         min="0"
                       />
                     </div>
-                    <div className="mt-2 h-5 text-xs text-gray-500 overflow-visible whitespace-nowrap relative z-50">
+                    <div className="mt-2 text-xs text-gray-500 overflow-visible whitespace-nowrap relative" style={{zIndex: 999}}>
                       {asset.currentPrice && asset.currentValue > 0 && (
                         <>
                           <span className="font-medium text-gray-400">
@@ -276,7 +276,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         disabled={!asset.currentPrice}
                       />
                     </div>
-                    <div className="mt-2 h-5 text-xs text-gray-500 overflow-visible whitespace-nowrap relative z-50">
+                    <div className="mt-2 text-xs text-gray-500 overflow-visible whitespace-nowrap relative" style={{zIndex: 999}}>
                       {asset.currentPrice && asset.shares && asset.shares > 0 ? (
                         <>
                           <span className="font-medium text-gray-400">{asset.shares.toFixed(3)}</span>
