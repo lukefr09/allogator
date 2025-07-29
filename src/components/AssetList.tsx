@@ -125,7 +125,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
                       ⓘ
                       <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                        The ticker symbol for your asset<br/>(e.g., AAPL, VOO, BTC-USD)
+                        The ticker symbol for your asset<br/>(e.g., AAPL, VOO, BTC)
                       </span>
                     </span>
                   </label>
