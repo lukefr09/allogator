@@ -398,7 +398,7 @@ const PortfolioRebalancer = () => {
     <>
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="min-h-screen pt-24 sm:pt-32 pb-8">
+      <div className="min-h-screen pt-40 sm:pt-32 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           
           {/* Main Content Grid */}
