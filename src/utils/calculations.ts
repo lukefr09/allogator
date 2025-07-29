@@ -7,67 +7,67 @@ export const calculateAllocations = (
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
   
-  const results: AllocationResult[] = [];
-  let totalAllocated = 0;
+  // Calculate initial deviations and sort by most underweight
+  const assetsWithDeviation = assets.map((asset, index) => {
+    const currentPercentage = currentTotal > 0 ? (asset.currentValue / currentTotal) * 100 : 0;
+    const targetPercentage = asset.targetPercentage * 100;
+    const deviation = currentPercentage - targetPercentage;
+    return { asset, index, deviation, targetPercentage };
+  }).sort((a, b) => a.deviation - b.deviation);
+  
+  const results: AllocationResult[] = new Array(assets.length);
+  let remainingMoney = Math.round(newMoney * 100); // Work in cents
   
   // First pass: allocate to underweight positions
-  assets.forEach(asset => {
-    const targetValue = newTotal * asset.targetPercentage;
-    const needed = Math.max(0, targetValue - asset.currentValue);
-    const amountToAdd = Math.min(needed, newMoney - totalAllocated);
+  assetsWithDeviation.forEach(({ asset, index, targetPercentage }) => {
+    const targetValue = Math.round(newTotal * asset.targetPercentage * 100); // In cents
+    const currentValueCents = Math.round(asset.currentValue * 100);
+    const needed = Math.max(0, targetValue - currentValueCents);
+    const toAllocate = Math.min(needed, remainingMoney);
     
-    results.push({
+    results[index] = {
       symbol: asset.symbol,
-      amountToAdd: 0, // Will be updated
-      newValue: asset.currentValue,
-      newPercentage: 0,
-      targetPercentage: asset.targetPercentage * 100,
+      amountToAdd: toAllocate / 100,
+      newValue: asset.currentValue + (toAllocate / 100),
+      newPercentage: ((currentValueCents + toAllocate) / (newTotal * 100)) * 100,
+      targetPercentage,
       difference: 0
-    });
+    };
     
-    totalAllocated += amountToAdd;
+    remainingMoney -= toAllocate;
   });
   
-  // Reset for actual allocation
-  totalAllocated = 0;
-  
-  // Allocate to underweight positions first
-  assets.forEach((asset, index) => {
-    const targetValue = newTotal * asset.targetPercentage;
-    const needed = Math.max(0, targetValue - asset.currentValue);
-    const amountToAdd = Math.min(needed, newMoney - totalAllocated);
+  // Second pass: if money remains, allocate proportionally
+  if (remainingMoney > 0) {
+    let allocatedInSecondPass = 0;
     
-    results[index].amountToAdd = amountToAdd;
-    totalAllocated += amountToAdd;
-  });
-  
-  // If money remains, allocate proportionally
-  if (totalAllocated < newMoney) {
-    const remaining = newMoney - totalAllocated;
-    
-    assets.forEach((asset, index) => {
-      const additionalAmount = remaining * asset.targetPercentage;
-      results[index].amountToAdd += additionalAmount;
+    assetsWithDeviation.forEach(({ asset, index }) => {
+      if (remainingMoney > 0) {
+        const proportion = asset.targetPercentage;
+        const proportionalAmount = Math.round(remainingMoney * proportion);
+        const toAllocate = Math.min(proportionalAmount, remainingMoney - allocatedInSecondPass);
+        
+        results[index].amountToAdd += toAllocate / 100;
+        allocatedInSecondPass += toAllocate;
+      }
     });
+    
+    remainingMoney -= allocatedInSecondPass;
   }
   
-  // Round to cents and calculate final values
+  // Final pass: handle any remaining cents due to rounding
+  if (remainingMoney > 0) {
+    // Give remaining cents to the most underweight position
+    const mostUnderweightIndex = assetsWithDeviation[0].index;
+    results[mostUnderweightIndex].amountToAdd += remainingMoney / 100;
+  }
+  
+  // Calculate final values and differences
   results.forEach((result, index) => {
-    result.amountToAdd = Math.round(result.amountToAdd * 100) / 100;
     result.newValue = assets[index].currentValue + result.amountToAdd;
     result.newPercentage = (result.newValue / newTotal) * 100;
     result.difference = result.newPercentage - result.targetPercentage;
   });
-  
-  // Adjust for rounding errors
-  const sumAllocated = results.reduce((sum, r) => sum + r.amountToAdd, 0);
-  if (Math.abs(sumAllocated - newMoney) > 0.01 && results.length > 0) {
-    const diff = newMoney - sumAllocated;
-    results[0].amountToAdd = Math.round((results[0].amountToAdd + diff) * 100) / 100;
-    results[0].newValue = assets[0].currentValue + results[0].amountToAdd;
-    results[0].newPercentage = (results[0].newValue / newTotal) * 100;
-    results[0].difference = results[0].newPercentage - results[0].targetPercentage;
-  }
   
   return results;
 };
