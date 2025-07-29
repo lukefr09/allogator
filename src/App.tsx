@@ -1,176 +1,163 @@
 import React, { useState, useEffect } from 'react';
+import { Asset, AllocationResult } from './types';
+import AddAsset from './components/AddAsset';
+import AssetList from './components/AssetList';
+import { validatePortfolio, calculateTotalPercentage } from './utils/validation';
+import { calculateAllocations } from './utils/calculations';
 
 const PortfolioRebalancer = () => {
-  const [holdings, setHoldings] = useState({
-    QQQ: 1708.80,
-    NVDA: 533.22,
-    SMH: 585.20,
-    VEU: 0,
-    BTC: 197.00
-  });
+  const [assets, setAssets] = useState<Asset[]>([
+    { symbol: 'QQQ', currentValue: 1708.80, targetPercentage: 0.50 },
+    { symbol: 'NVDA', currentValue: 533.22, targetPercentage: 0.20 },
+    { symbol: 'SMH', currentValue: 585.20, targetPercentage: 0.10 },
+    { symbol: 'VEU', currentValue: 0, targetPercentage: 0.10 },
+    { symbol: 'BTC', currentValue: 197.00, targetPercentage: 0.10 }
+  ]);
   
   const [newMoney, setNewMoney] = useState(1000);
+  const [allocations, setAllocations] = useState<AllocationResult[]>([]);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   
-  const targets = {
-    QQQ: 0.50,
-    NVDA: 0.20,
-    SMH: 0.10,
-    VEU: 0.10,
-    BTC: 0.10
-  };
-  
-  const [allocations, setAllocations] = useState<Record<string, number>>({});
+  const totalPercentage = calculateTotalPercentage(assets);
   
   useEffect(() => {
-    calculateAllocations();
-  }, [holdings, newMoney]);
+    const validation = validatePortfolio(assets);
+    setValidationErrors(validation.errors);
+    
+    if (validation.isValid && newMoney > 0) {
+      const results = calculateAllocations(assets, newMoney);
+      setAllocations(results);
+    } else {
+      setAllocations([]);
+    }
+  }, [assets, newMoney]);
   
-  const calculateAllocations = () => {
-    const currentTotal = Object.values(holdings).reduce((sum, val) => sum + val, 0);
-    const newTotal = currentTotal + newMoney;
+  const handleAddAsset = (newAsset: Omit<Asset, 'currentValue'>) => {
+    if (assets.length >= 20) return;
     
-    // Calculate target values
-    const targetValues: Record<string, number> = {};
-    Object.keys(targets).forEach(symbol => {
-      targetValues[symbol] = newTotal * targets[symbol as keyof typeof targets];
-    });
-    
-    // Calculate how much to add to each
-    const toAdd: Record<string, number> = {};
-    let totalAllocated = 0;
-    
-    // First pass: allocate to underweight positions
-    Object.keys(targets).forEach(symbol => {
-      const currentValue = holdings[symbol as keyof typeof holdings];
-      const targetValue = targetValues[symbol];
-      const needed = Math.max(0, targetValue - currentValue);
-      toAdd[symbol] = Math.min(needed, newMoney - totalAllocated);
-      totalAllocated += toAdd[symbol];
-    });
-    
-    // If money remains, allocate proportionally to maintain targets
-    if (totalAllocated < newMoney) {
-      const remaining = newMoney - totalAllocated;
-      
-      Object.keys(targets).forEach(symbol => {
-        const additionalAmount = remaining * targets[symbol as keyof typeof targets];
-        toAdd[symbol] = (toAdd[symbol] || 0) + additionalAmount;
-      });
-    }
-    
-    // Round to cents
-    Object.keys(toAdd).forEach(symbol => {
-      toAdd[symbol] = Math.round(toAdd[symbol] * 100) / 100;
-    });
-    
-    // Adjust for rounding errors
-    const sumAllocated = Object.values(toAdd).reduce((sum, val) => sum + val, 0);
-    if (sumAllocated !== newMoney) {
-      const diff = newMoney - sumAllocated;
-      toAdd.QQQ = Math.round((toAdd.QQQ + diff) * 100) / 100;
-    }
-    
-    setAllocations(toAdd);
+    setAssets([...assets, { ...newAsset, currentValue: 0 }]);
   };
   
-  const updateHolding = (symbol: string, value: string) => {
-    setHoldings(prev => ({
-      ...prev,
-      [symbol]: parseFloat(value) || 0
-    }));
+  const handleUpdateAsset = (index: number, field: keyof Asset, value: number | string) => {
+    const updated = [...assets];
+    if (field === 'symbol') {
+      updated[index].symbol = value as string;
+    } else if (field === 'currentValue') {
+      updated[index].currentValue = value as number;
+    } else if (field === 'targetPercentage') {
+      updated[index].targetPercentage = value as number;
+    }
+    setAssets(updated);
   };
   
-  const currentTotal = Object.values(holdings).reduce((sum, val) => sum + val, 0);
+  const handleRemoveAsset = (index: number) => {
+    if (assets.length <= 2) return;
+    setAssets(assets.filter((_, i) => i !== index));
+  };
+  
+  const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
   
   return (
     <div className="w-full max-w-4xl mx-auto p-6 bg-gray-900 text-white rounded-lg">
       <h1 className="text-3xl font-bold mb-6 text-center">Portfolio Rebalancing Calculator</h1>
       
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Current Holdings</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Object.keys(holdings).map(symbol => (
-            <div key={symbol} className="bg-gray-800 p-3 rounded">
-              <label className="block text-sm font-medium mb-1">{symbol}</label>
-              <input
-                type="number"
-                value={holdings[symbol as keyof typeof holdings]}
-                onChange={(e) => updateHolding(symbol, e.target.value)}
-                className="w-full px-2 py-1 bg-gray-700 rounded text-white"
-                step="0.01"
-              />
-              <div className="text-xs text-gray-400 mt-1">
-                Current: {((holdings[symbol as keyof typeof holdings] / currentTotal) * 100).toFixed(1)}% | 
-                Target: {(targets[symbol as keyof typeof targets] * 100).toFixed(0)}%
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <AssetList
+        assets={assets}
+        onUpdateAsset={handleUpdateAsset}
+        onRemoveAsset={handleRemoveAsset}
+        totalPercentage={totalPercentage}
+      />
+      
+      <AddAsset
+        onAddAsset={handleAddAsset}
+        currentAssetsCount={assets.length}
+      />
       
       <div className="mb-8 bg-gray-800 p-4 rounded">
         <label className="block text-lg font-medium mb-2">New Money to Invest</label>
         <input
           type="number"
           value={newMoney}
-          onChange={(e) => setNewMoney(parseFloat(e.target.value) || 0)}
+          onChange={(e) => {
+            const value = parseFloat(e.target.value) || 0;
+            if (value >= 0.01 && value <= 1000000) {
+              setNewMoney(value);
+            } else if (value < 0.01) {
+              setNewMoney(0.01);
+            } else if (value > 1000000) {
+              setNewMoney(1000000);
+            }
+          }}
           className="w-full px-3 py-2 bg-gray-700 rounded text-white text-lg"
           step="0.01"
+          min="0.01"
+          max="1000000"
         />
-      </div>
-      
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">How to Allocate ${newMoney.toFixed(2)}</h2>
-        <div className="bg-gray-800 p-4 rounded">
-          {Object.keys(allocations).map(symbol => (
-            <div key={symbol} className="flex justify-between items-center py-2 border-b border-gray-700 last:border-0">
-              <span className="font-medium">{symbol}</span>
-              <span className="text-green-400 font-mono">${allocations[symbol]?.toFixed(2) || '0.00'}</span>
-            </div>
-          ))}
-          <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-600">
-            <span className="font-bold">Total</span>
-            <span className="text-green-400 font-mono font-bold">
-              ${Object.values(allocations).reduce((sum, val) => sum + val, 0).toFixed(2)}
-            </span>
-          </div>
+        <div className="text-xs text-gray-400 mt-1">
+          Enter amount between $0.01 and $1,000,000
         </div>
       </div>
       
-      <div className="bg-gray-800 p-4 rounded">
-        <h3 className="text-lg font-semibold mb-3">After Investment</h3>
-        <div className="space-y-2">
-          {Object.keys(holdings).map(symbol => {
-            const newValue = holdings[symbol as keyof typeof holdings] + (allocations[symbol] || 0);
-            const newPercent = (newValue / newTotal) * 100;
-            const targetPercent = targets[symbol as keyof typeof targets] * 100;
-            const diff = newPercent - targetPercent;
-            
-            return (
-              <div key={symbol} className="flex justify-between items-center">
-                <span>{symbol}</span>
-                <div className="text-right">
-                  <span className="font-mono">${newValue.toFixed(2)}</span>
-                  <span className={`ml-3 text-sm ${Math.abs(diff) < 0.5 ? 'text-green-400' : 'text-yellow-400'}`}>
-                    {newPercent.toFixed(1)}% ({diff > 0 ? '+' : ''}{diff.toFixed(1)}%)
-                  </span>
-                </div>
+      {validationErrors.length > 0 && (
+        <div className="mb-6 bg-red-900/20 border border-red-600 rounded p-4">
+          <h3 className="text-red-400 font-semibold mb-2">Validation Errors:</h3>
+          <ul className="list-disc list-inside text-red-300 text-sm">
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {validationErrors.length === 0 && allocations.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">How to Allocate ${newMoney.toFixed(2)}</h2>
+          <div className="bg-gray-800 p-4 rounded">
+            {allocations.map(allocation => (
+              <div key={allocation.symbol} className="flex justify-between items-center py-2 border-b border-gray-700 last:border-0">
+                <span className="font-medium">{allocation.symbol}</span>
+                <span className="text-green-400 font-mono">${allocation.amountToAdd.toFixed(2)}</span>
               </div>
-            );
-          })}
-          <div className="pt-3 mt-3 border-t border-gray-700">
-            <div className="flex justify-between font-bold">
-              <span>New Total</span>
-              <span className="font-mono">${newTotal.toFixed(2)}</span>
+            ))}
+            <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-600">
+              <span className="font-bold">Total</span>
+              <span className="text-green-400 font-mono font-bold">
+                ${allocations.reduce((sum, a) => sum + a.amountToAdd, 0).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
-      </div>
+      )}
       
-      <div className="mt-6 text-sm text-gray-400 text-center">
-        Target Allocation: QQQ 50% | NVDA 20% | SMH 10% | VEU 10% | BTC 10%
-      </div>
+      {validationErrors.length === 0 && allocations.length > 0 && (
+        <div className="bg-gray-800 p-4 rounded">
+          <h3 className="text-lg font-semibold mb-3">After Investment</h3>
+          <div className="space-y-2">
+            {allocations.map(allocation => {
+              const diffColor = Math.abs(allocation.difference) < 0.5 ? 'text-green-400' : 'text-yellow-400';
+              
+              return (
+                <div key={allocation.symbol} className="flex justify-between items-center">
+                  <span>{allocation.symbol}</span>
+                  <div className="text-right">
+                    <span className="font-mono">${allocation.newValue.toFixed(2)}</span>
+                    <span className={`ml-3 text-sm ${diffColor}`}>
+                      {allocation.newPercentage.toFixed(1)}% ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pt-3 mt-3 border-t border-gray-700">
+              <div className="flex justify-between font-bold">
+                <span>New Total</span>
+                <span className="font-mono">${newTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
