@@ -99,7 +99,7 @@ const AssetList: React.FC<AssetListProps> = ({
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-start">
               {/* Symbol Input */}
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Symbol</label>
@@ -110,56 +110,58 @@ const AssetList: React.FC<AssetListProps> = ({
                   className="glass-input w-full font-semibold text-lg tabular-nums"
                   placeholder="AAPL"
                 />
-                {asset.currentPrice && (
-                  <div className="mt-2 text-xs text-gray-500 flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-400">{asset.symbol}</span>
-                      <span className="mx-1">@</span>
-                      <span className="font-medium text-gray-300">${asset.currentPrice.toFixed(2)}</span>
-                      {asset.priceSource === 'manual' && (
-                        <span className="ml-1 text-yellow-400">(manual)</span>
-                      )}
-                    </div>
-                    {manualPriceIndex === index ? (
-                      <div className="flex items-center gap-2 ml-2">
-                        <input
-                          type="number"
-                          placeholder="Price"
-                          className="glass-input text-xs px-2 py-0.5 w-16"
-                          step="0.01"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const price = parseFloat(e.currentTarget.value);
-                              if (price > 0) {
-                                onUpdateAsset(index, 'currentPrice', price);
-                                onUpdateAsset(index, 'priceSource', 'manual');
-                                onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
-                              }
-                              setManualPriceIndex(null);
-                            } else if (e.key === 'Escape') {
-                              setManualPriceIndex(null);
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => setManualPriceIndex(null)}
-                          className="text-gray-500 hover:text-gray-400 text-xs"
-                        >
-                          ×
-                        </button>
+                <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between">
+                  {asset.currentPrice && (
+                    <>
+                      <div>
+                        <span className="font-medium text-gray-400">{asset.symbol}</span>
+                        <span className="mx-1">@</span>
+                        <span className="font-medium text-gray-300">${asset.currentPrice.toFixed(2)}</span>
+                        {asset.priceSource === 'manual' && (
+                          <span className="ml-1 text-yellow-400">(manual)</span>
+                        )}
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setManualPriceIndex(index)}
-                        className="text-xs text-gray-500 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                        title="Set price manually"
-                      >
-                        ✎
-                      </button>
-                    )}
-                  </div>
-                )}
+                      {manualPriceIndex === index ? (
+                        <div className="flex items-center gap-2 ml-2">
+                          <input
+                            type="number"
+                            placeholder="Price"
+                            className="glass-input text-xs px-2 py-0.5 w-16"
+                            step="0.01"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const price = parseFloat(e.currentTarget.value);
+                                if (price > 0) {
+                                  onUpdateAsset(index, 'currentPrice', price);
+                                  onUpdateAsset(index, 'priceSource', 'manual');
+                                  onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
+                                }
+                                setManualPriceIndex(null);
+                              } else if (e.key === 'Escape') {
+                                setManualPriceIndex(null);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => setManualPriceIndex(null)}
+                            className="text-gray-500 hover:text-gray-400 text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setManualPriceIndex(index)}
+                          className="text-xs text-gray-500 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                          title="Set price manually"
+                        >
+                          ✎
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
               
               {/* Current Value/Shares Input */}
@@ -171,24 +173,40 @@ const AssetList: React.FC<AssetListProps> = ({
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                       <input
                         type="number"
-                        value={asset.currentValue}
-                        onChange={(e) => onUpdateAsset(index, 'currentValue', parseFloat(e.target.value) || 0)}
+                        defaultValue={asset.currentValue.toString()}
+                        key={`value-${index}-${asset.currentValue}`} // Force re-render when value changes externally
+                        onChange={(e) => {
+                          // Just store the value temporarily, don't validate yet
+                          e.target.dataset.tempValue = e.target.value;
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          const numValue = parseFloat(value) || 0;
+                          onUpdateAsset(index, 'currentValue', numValue);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur(); // Trigger blur to save
+                          }
+                        }}
                         className="glass-input w-full pl-8 font-medium tabular-nums text-base"
                         placeholder="0.00"
                         step="0.01"
                         min="0"
                       />
                     </div>
-                    {asset.currentPrice && asset.currentValue > 0 && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        <span className="font-medium text-gray-400">
-                          {asset.shares ? asset.shares.toFixed(6) : (asset.currentValue / asset.currentPrice).toFixed(6)}
-                        </span>
-                        <span className="ml-1">shares</span>
-                        <span className="mx-1">=</span>
-                        <span className="font-medium text-gray-300">${asset.currentValue.toFixed(2)}</span>
-                      </div>
-                    )}
+                    <div className="mt-2 h-5 text-xs text-gray-500">
+                      {asset.currentPrice && asset.currentValue > 0 && (
+                        <>
+                          <span className="font-medium text-gray-400">
+                            {asset.shares ? asset.shares.toFixed(3) : (asset.currentValue / asset.currentPrice).toFixed(3)}
+                          </span>
+                          <span className="ml-1">shares</span>
+                          <span className="mx-1">=</span>
+                          <span className="font-medium text-gray-300">${asset.currentValue.toFixed(2)}</span>
+                        </>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
@@ -197,50 +215,78 @@ const AssetList: React.FC<AssetListProps> = ({
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">#</span>
                       <input
                         type="number"
-                        value={asset.shares ? asset.shares.toString() : ''}
+                        defaultValue={asset.shares ? (Math.round(asset.shares * 1000000) / 1000000).toString() : ''}
+                        key={`shares-${index}-${asset.shares}`} // Force re-render when shares change externally
                         onChange={(e) => {
+                          // Just store the value temporarily, don't validate yet
+                          e.target.dataset.tempValue = e.target.value;
+                        }}
+                        onBlur={(e) => {
                           const value = e.target.value;
                           if (value === '') {
                             onUpdateAsset(index, 'shares', 0);
                           } else {
-                            const numValue = parseFloat(value);
+                            // Parse and limit to 6 decimal places
+                            let numValue = parseFloat(value);
                             if (!isNaN(numValue)) {
+                              // Round to 6 decimal places
+                              numValue = Math.round(numValue * 1000000) / 1000000;
                               onUpdateAsset(index, 'shares', numValue);
+                              // Update the display value
+                              e.target.value = numValue.toString();
                             }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur(); // Trigger blur to save
                           }
                         }}
                         className="glass-input w-full pl-8 font-medium tabular-nums text-base"
                         placeholder="0.000000"
-                        step="any"
+                        step="0.000001"
                         min="0"
                         disabled={!asset.currentPrice}
                       />
                     </div>
-                    {asset.currentPrice && asset.shares && asset.shares > 0 && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        <span className="font-medium text-gray-400">{asset.shares?.toFixed(6)}</span>
-                        <span className="ml-1">shares</span>
-                        <span className="mx-1">=</span>
-                        <span className="font-medium text-gray-300">${(asset.shares * asset.currentPrice).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {!asset.currentPrice && (
-                      <div className="mt-2 text-xs text-red-400/80">
-                        Price needed for shares
-                      </div>
-                    )}
+                    <div className="mt-2 h-5 text-xs text-gray-500">
+                      {asset.currentPrice && asset.shares && asset.shares > 0 ? (
+                        <>
+                          <span className="font-medium text-gray-400">{asset.shares?.toFixed(3)}</span>
+                          <span className="ml-1">shares</span>
+                          <span className="mx-1">=</span>
+                          <span className="font-medium text-gray-300">${(asset.shares * asset.currentPrice).toFixed(2)}</span>
+                        </>
+                      ) : !asset.currentPrice ? (
+                        <span className="text-red-400/80">Price needed for shares</span>
+                      ) : null}
+                    </div>
                   </>
                 )}
               </div>
               
               {/* Target Percentage Input */}
-              <div className="w-32">
+              <div className="w-32 self-start">
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Target %</label>
                 <div className="relative">
                   <input
                     type="number"
-                    value={(asset.targetPercentage * 100).toFixed(1)}
-                    onChange={(e) => onUpdateAsset(index, 'targetPercentage', (parseFloat(e.target.value) || 0) / 100)}
+                    defaultValue={(asset.targetPercentage * 100).toFixed(1)}
+                    key={`target-${index}-${asset.targetPercentage}`} // Force re-render when target changes externally
+                    onChange={(e) => {
+                      // Just store the value temporarily, don't validate yet
+                      e.target.dataset.tempValue = e.target.value;
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value) || 0;
+                      onUpdateAsset(index, 'targetPercentage', numValue / 100);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur(); // Trigger blur to save
+                      }
+                    }}
                     className="glass-input w-full pr-8 font-medium tabular-nums"
                     placeholder="0.0"
                     step="0.1"

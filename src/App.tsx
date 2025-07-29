@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Asset, AllocationResult, SavedPortfolio, ViewMode } from './types';
+import { Asset, AllocationResult, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
 import AssetList from './components/AssetList';
@@ -7,53 +7,24 @@ import GlassCard from './components/GlassCard';
 import AnimatedNumber from './components/AnimatedNumber';
 import { validatePortfolio, calculateTotalPercentage } from './utils/validation';
 import { calculateAllocations } from './utils/calculations';
-import { 
-  getStorageData, 
-  savePortfolio, 
-  loadPortfolio, 
-  deletePortfolio,
-  setActivePortfolio,
-  exportPortfolio,
-  importPortfolio
-} from './utils/storage';
 import { priceService } from './services/priceService';
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
-    { symbol: 'QQQ', currentValue: 1708.80, targetPercentage: 0.50 },
-    { symbol: 'NVDA', currentValue: 533.22, targetPercentage: 0.20 },
-    { symbol: 'SMH', currentValue: 585.20, targetPercentage: 0.10 },
-    { symbol: 'VEU', currentValue: 0, targetPercentage: 0.10 },
-    { symbol: 'BTC', currentValue: 197.00, targetPercentage: 0.10 }
+    { symbol: 'VOO', currentValue: 0, targetPercentage: 0.50 },
+    { symbol: 'QQQ', currentValue: 0, targetPercentage: 0.30 },
+    { symbol: 'NVDA', currentValue: 0, targetPercentage: 0.20 }
   ];
   
   const [assets, setAssets] = useState<Asset[]>(defaultAssets);
   const [newMoney, setNewMoney] = useState(1000);
   const [allocations, setAllocations] = useState<AllocationResult[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [portfolioName, setPortfolioName] = useState('Main Portfolio');
-  const [activePortfolioId, setActivePortfolioIdState] = useState<string | null>(null);
-  const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('money');
   
   const totalPercentage = calculateTotalPercentage(assets);
   
-  useEffect(() => {
-    const storage = getStorageData();
-    setSavedPortfolios(storage.portfolios);
-    
-    if (storage.activePortfolioId) {
-      const portfolio = loadPortfolio(storage.activePortfolioId);
-      if (portfolio) {
-        setAssets(portfolio.assets);
-        setNewMoney(portfolio.newMoney);
-        setPortfolioName(portfolio.name);
-        setActivePortfolioIdState(portfolio.id);
-      }
-    }
-  }, []);
   
   // Fetch prices after assets are loaded
   useEffect(() => {
@@ -74,10 +45,36 @@ const PortfolioRebalancer = () => {
     }
   }, [assets, newMoney]);
   
-  const handleAddAsset = (newAsset: Omit<Asset, 'currentValue'>) => {
+  const handleAddAsset = async (newAsset: Omit<Asset, 'currentValue'>) => {
     if (assets.length >= 20) return;
     
-    setAssets([...assets, { ...newAsset, currentValue: 0 }]);
+    // Add the asset with initial values
+    const assetWithDefaults: Asset = { ...newAsset, currentValue: 0 };
+    setAssets([...assets, assetWithDefaults]);
+    
+    // Fetch price for the new asset
+    if (newAsset.symbol.trim() !== '') {
+      const priceData = await priceService.fetchPrice(newAsset.symbol);
+      if (priceData) {
+        // Update the assets array with the fetched price
+        setAssets(prevAssets => {
+          const updatedAssets = [...prevAssets];
+          const newAssetIndex = updatedAssets.length - 1;
+          if (updatedAssets[newAssetIndex].symbol === newAsset.symbol) {
+            updatedAssets[newAssetIndex] = {
+              ...updatedAssets[newAssetIndex],
+              currentPrice: priceData.price,
+              lastUpdated: priceData.timestamp,
+              priceSource: 'api'
+            };
+          }
+          return updatedAssets;
+        });
+        
+        // Update the last price update timestamp
+        setLastPriceUpdate(new Date().toISOString());
+      }
+    }
   };
   
   const handleUpdateAsset = (index: number, field: keyof Asset, value: number | string) => {
@@ -131,76 +128,6 @@ const PortfolioRebalancer = () => {
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
   
-  const handleSavePortfolio = () => {
-    setIsSaving(true);
-    const result = savePortfolio(portfolioName, assets, newMoney, activePortfolioId || undefined);
-    
-    if (result.success) {
-      const storage = getStorageData();
-      setSavedPortfolios(storage.portfolios);
-      if (result.id && !activePortfolioId) {
-        setActivePortfolioIdState(result.id);
-      }
-    } else {
-      alert(result.error || 'Failed to save portfolio');
-    }
-    
-    setIsSaving(false);
-  };
-  
-  const handleLoadPortfolio = (portfolioId: string) => {
-    const portfolio = loadPortfolio(portfolioId);
-    if (portfolio) {
-      setAssets(portfolio.assets);
-      setNewMoney(portfolio.newMoney);
-      setPortfolioName(portfolio.name);
-      setActivePortfolioIdState(portfolio.id);
-      setActivePortfolio(portfolio.id);
-    }
-  };
-  
-  const handleDeletePortfolio = (portfolioId: string) => {
-    if (confirm('Are you sure you want to delete this portfolio?')) {
-      deletePortfolio(portfolioId);
-      const storage = getStorageData();
-      setSavedPortfolios(storage.portfolios);
-      
-      if (portfolioId === activePortfolioId) {
-        if (storage.portfolios.length > 0) {
-          handleLoadPortfolio(storage.portfolios[0].id);
-        } else {
-          setAssets(defaultAssets);
-          setNewMoney(1000);
-          setPortfolioName('Main Portfolio');
-          setActivePortfolioIdState(null);
-        }
-      }
-    }
-  };
-  
-  const handleExportPortfolio = () => {
-    if (activePortfolioId) {
-      const portfolio = loadPortfolio(activePortfolioId);
-      if (portfolio) {
-        exportPortfolio(portfolio);
-      }
-    }
-  };
-  
-  const handleImportPortfolio = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const result = await importPortfolio(file);
-      if (result.success && result.portfolio) {
-        const storage = getStorageData();
-        setSavedPortfolios(storage.portfolios);
-        handleLoadPortfolio(result.portfolio.id);
-      } else {
-        alert(result.error || 'Failed to import portfolio');
-      }
-      event.target.value = '';
-    }
-  };
   
   const handleRefreshPrices = async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
@@ -239,18 +166,7 @@ const PortfolioRebalancer = () => {
   
   return (
     <>
-      <Header
-        portfolioName={portfolioName}
-        activePortfolioId={activePortfolioId}
-        savedPortfolios={savedPortfolios}
-        isSaving={isSaving}
-        onPortfolioNameChange={setPortfolioName}
-        onSavePortfolio={handleSavePortfolio}
-        onLoadPortfolio={handleLoadPortfolio}
-        onDeletePortfolio={handleDeletePortfolio}
-        onExportPortfolio={handleExportPortfolio}
-        onImportPortfolio={handleImportPortfolio}
-      />
+      <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
       <div className="min-h-screen pt-36 pb-12 px-6">
         <div className="max-w-7xl mx-auto">
@@ -279,35 +195,6 @@ const PortfolioRebalancer = () => {
             
             {/* Right Column - Calculations */}
             <div className="space-y-6">
-              {/* New Money Input */}
-              <GlassCard variant="default" padding="lg">
-                <label className="block text-lg font-semibold text-gray-100 mb-3">New Money to Invest</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">$</span>
-                  <input
-                    type="number"
-                    value={newMoney}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      if (value >= 0.01 && value <= 1000000) {
-                        setNewMoney(parseFloat(value.toFixed(2)));
-                      } else if (value < 0.01) {
-                        setNewMoney(0.01);
-                      } else if (value > 1000000) {
-                        setNewMoney(1000000);
-                      }
-                    }}
-                    className="glass-input w-full pl-10 text-xl font-semibold tabular-nums"
-                    step="0.01"
-                    min="0.01"
-                    max="1000000"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Enter amount between $0.01 and $1,000,000
-                </p>
-              </GlassCard>
-              
               {/* Validation Errors */}
               {validationErrors.length > 0 && (
                 <GlassCard variant="default" padding="md" className="border-red-500/20">

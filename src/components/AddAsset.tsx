@@ -3,7 +3,7 @@ import { Asset } from '../types';
 import GlassCard from './GlassCard';
 
 interface AddAssetProps {
-  onAddAsset: (asset: Omit<Asset, 'currentValue'>) => void;
+  onAddAsset: (asset: Omit<Asset, 'currentValue'>) => void | Promise<void>;
   currentAssetsCount: number;
 }
 
@@ -27,9 +27,9 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
 
     setIsAdding(true);
     
-    // Simulate adding animation
-    setTimeout(() => {
-      onAddAsset({
+    // Add the asset (price will be fetched automatically)
+    const addAsset = async () => {
+      await onAddAsset({
         symbol: symbol.toUpperCase(),
         targetPercentage: percentage / 100
       });
@@ -40,7 +40,9 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
       
       // Focus back on symbol input
       symbolInputRef.current?.focus();
-    }, 300);
+    };
+    
+    addAsset();
   };
 
   const isMaxAssets = currentAssetsCount >= 20;
