@@ -41,10 +41,20 @@ const AssetList: React.FC<AssetListProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <div className={`glass-light px-4 py-2 rounded-lg text-sm font-medium ${isValidTotal ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className="text-gray-400 mr-2">Target Total:</span>
+            {totalPercentage.toFixed(1)}%
+          </div>
           <ViewModeToggle 
             viewMode={viewMode} 
             onViewModeChange={onViewModeChange} 
           />
+        </div>
+      </div>
+      
+      {lastPriceUpdate && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
+          <span>Prices last updated: {new Date(lastPriceUpdate).toLocaleString()}</span>
           {onRefreshPrices && (
             <button
               onClick={async () => {
@@ -53,29 +63,19 @@ const AssetList: React.FC<AssetListProps> = ({
                 setIsRefreshing(false);
               }}
               disabled={isRefreshing}
-              className="glass-button px-3 py-1.5 text-sm flex items-center gap-2"
+              className="p-1 hover:bg-gray-700 rounded transition-colors duration-200"
+              title="Refresh prices"
             >
               <svg 
-                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} 
+                className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {isRefreshing ? 'Refreshing...' : 'Refresh Prices'}
             </button>
           )}
-          <div className={`glass-light px-4 py-2 rounded-lg text-sm font-medium ${isValidTotal ? 'text-emerald-400' : 'text-red-400'}`}>
-            <span className="text-gray-400 mr-2">Target Total:</span>
-            {totalPercentage.toFixed(1)}%
-          </div>
-        </div>
-      </div>
-      
-      {lastPriceUpdate && (
-        <div className="text-xs text-gray-500 mb-4">
-          Prices last updated: {new Date(lastPriceUpdate).toLocaleString()}
         </div>
       )}
       
@@ -89,11 +89,11 @@ const AssetList: React.FC<AssetListProps> = ({
       )}
       
       {/* Asset List */}
-      <div className="space-y-3 animate-stagger">
+      <div className="space-y-4 animate-stagger">
         {assets.map((asset, index) => (
           <div
             key={index}
-            className={`glass-light p-4 rounded-xl transition-all duration-300 ${
+            className={`group glass-light p-5 rounded-xl transition-all duration-300 border-b border-white/5 last:border-b-0 ${
               hoveredIndex === index ? 'scale-[1.01] shadow-lg' : ''
             }`}
             onMouseEnter={() => setHoveredIndex(index)}
@@ -111,20 +111,59 @@ const AssetList: React.FC<AssetListProps> = ({
                   placeholder="AAPL"
                 />
                 {asset.currentPrice && (
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Price:</span>
-                    <span className="text-xs font-medium text-gray-300">
-                      ${asset.currentPrice.toFixed(2)}
-                    </span>
-                    {asset.priceSource === 'manual' && (
-                      <span className="text-xs text-yellow-400">(manual)</span>
+                  <div className="mt-2 text-xs text-gray-500 flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-gray-400">{asset.symbol}</span>
+                      <span className="mx-1">@</span>
+                      <span className="font-medium text-gray-300">${asset.currentPrice.toFixed(2)}</span>
+                      {asset.priceSource === 'manual' && (
+                        <span className="ml-1 text-yellow-400">(manual)</span>
+                      )}
+                    </div>
+                    {manualPriceIndex === index ? (
+                      <div className="flex items-center gap-2 ml-2">
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          className="glass-input text-xs px-2 py-0.5 w-16"
+                          step="0.01"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const price = parseFloat(e.currentTarget.value);
+                              if (price > 0) {
+                                onUpdateAsset(index, 'currentPrice', price);
+                                onUpdateAsset(index, 'priceSource', 'manual');
+                                onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
+                              }
+                              setManualPriceIndex(null);
+                            } else if (e.key === 'Escape') {
+                              setManualPriceIndex(null);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => setManualPriceIndex(null)}
+                          className="text-gray-500 hover:text-gray-400 text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setManualPriceIndex(index)}
+                        className="text-xs text-gray-500 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                        title="Set price manually"
+                      >
+                        ✎
+                      </button>
                     )}
                   </div>
                 )}
               </div>
               
               {/* Current Value/Shares Input */}
-              <div className="w-36">
+              <div className="w-44">
                 {viewMode === 'money' ? (
                   <>
                     <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Value</label>
@@ -134,15 +173,20 @@ const AssetList: React.FC<AssetListProps> = ({
                         type="number"
                         value={asset.currentValue}
                         onChange={(e) => onUpdateAsset(index, 'currentValue', parseFloat(e.target.value) || 0)}
-                        className="glass-input w-full pl-8 font-medium tabular-nums"
+                        className="glass-input w-full pl-8 font-medium tabular-nums text-base"
                         placeholder="0.00"
                         step="0.01"
                         min="0"
                       />
                     </div>
                     {asset.currentPrice && asset.currentValue > 0 && (
-                      <div className="mt-1 text-xs text-gray-500">
-                        ~{(asset.currentValue / asset.currentPrice).toFixed(4)} shares
+                      <div className="mt-2 text-xs text-gray-500">
+                        <span className="font-medium text-gray-400">
+                          {asset.shares ? asset.shares.toFixed(6) : (asset.currentValue / asset.currentPrice).toFixed(6)}
+                        </span>
+                        <span className="ml-1">shares</span>
+                        <span className="mx-1">=</span>
+                        <span className="font-medium text-gray-300">${asset.currentValue.toFixed(2)}</span>
                       </div>
                     )}
                   </>
@@ -153,22 +197,35 @@ const AssetList: React.FC<AssetListProps> = ({
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">#</span>
                       <input
                         type="number"
-                        value={asset.shares || 0}
-                        onChange={(e) => onUpdateAsset(index, 'shares', parseFloat(e.target.value) || 0)}
-                        className="glass-input w-full pl-8 font-medium tabular-nums"
-                        placeholder="0.0000"
-                        step="0.0001"
+                        value={asset.shares ? asset.shares.toString() : ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === '') {
+                            onUpdateAsset(index, 'shares', 0);
+                          } else {
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue)) {
+                              onUpdateAsset(index, 'shares', numValue);
+                            }
+                          }
+                        }}
+                        className="glass-input w-full pl-8 font-medium tabular-nums text-base"
+                        placeholder="0.000000"
+                        step="any"
                         min="0"
                         disabled={!asset.currentPrice}
                       />
                     </div>
                     {asset.currentPrice && asset.shares && asset.shares > 0 && (
-                      <div className="mt-1 text-xs text-gray-500">
-                        ~${(asset.shares * asset.currentPrice).toFixed(2)} value
+                      <div className="mt-2 text-xs text-gray-500">
+                        <span className="font-medium text-gray-400">{asset.shares?.toFixed(6)}</span>
+                        <span className="ml-1">shares</span>
+                        <span className="mx-1">=</span>
+                        <span className="font-medium text-gray-300">${(asset.shares * asset.currentPrice).toFixed(2)}</span>
                       </div>
                     )}
                     {!asset.currentPrice && (
-                      <div className="mt-1 text-xs text-red-400">
+                      <div className="mt-2 text-xs text-red-400/80">
                         Price needed for shares
                       </div>
                     )}
@@ -215,52 +272,15 @@ const AssetList: React.FC<AssetListProps> = ({
               </div>
             </div>
             
-            {/* Current allocation info and manual price entry */}
-            <div className="mt-3 pt-3 border-t border-white/5">
+            {/* Current allocation info */}
+            <div className="mt-4 pt-4 border-t border-white/5">
               {currentTotal > 0 && (
-                <div className="flex items-center justify-between text-xs mb-2">
+                <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500">Current allocation</span>
-                  <span className="text-gray-400 font-medium tabular-nums">
-                    {((asset.currentValue / currentTotal) * 100).toFixed(1)}% of portfolio
+                  <span className="px-2 py-1 bg-gray-800/50 rounded text-gray-300 font-medium tabular-nums text-xs">
+                    {((asset.currentValue / currentTotal) * 100).toFixed(1)}%
                   </span>
                 </div>
-              )}
-              {manualPriceIndex === index ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    placeholder="Enter price"
-                    className="glass-input text-xs px-2 py-1 w-24"
-                    step="0.01"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const price = parseFloat(e.currentTarget.value);
-                        if (price > 0) {
-                          onUpdateAsset(index, 'currentPrice', price);
-                          onUpdateAsset(index, 'priceSource', 'manual');
-                          onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
-                        }
-                        setManualPriceIndex(null);
-                      } else if (e.key === 'Escape') {
-                        setManualPriceIndex(null);
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => setManualPriceIndex(null)}
-                    className="text-gray-400 hover:text-gray-300 text-xs"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setManualPriceIndex(index)}
-                  className="text-xs text-blue-400 hover:text-blue-300"
-                >
-                  Set price manually
-                </button>
               )}
             </div>
           </div>

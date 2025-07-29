@@ -91,13 +91,13 @@ const PortfolioRebalancer = () => {
       updated[index].shares = undefined;
     } else if (field === 'currentValue') {
       updated[index].currentValue = value as number;
-      // Update shares when value changes and price is available
-      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
+      // Only update shares from value if we don't already have shares (i.e., in money mode)
+      if (updated[index].currentPrice && updated[index].currentPrice > 0 && !updated[index].shares) {
         updated[index].shares = (value as number) / updated[index].currentPrice!;
       }
     } else if (field === 'shares') {
       updated[index].shares = value as number;
-      // Update value when shares change and price is available
+      // Always update value when shares change and price is available
       if (updated[index].currentPrice && updated[index].currentPrice > 0) {
         updated[index].currentValue = (value as number) * updated[index].currentPrice!;
       }
@@ -105,9 +105,15 @@ const PortfolioRebalancer = () => {
       updated[index].targetPercentage = value as number;
     } else if (field === 'currentPrice') {
       updated[index].currentPrice = value as number;
-      // Update shares when price changes and value exists
-      if (updated[index].currentValue > 0 && (value as number) > 0) {
-        updated[index].shares = updated[index].currentValue / (value as number);
+      // When price is manually set, prioritize shares if they exist, otherwise use value
+      if ((value as number) > 0) {
+        if (updated[index].shares && updated[index].shares > 0) {
+          // Update value based on existing shares
+          updated[index].currentValue = updated[index].shares! * (value as number);
+        } else if (updated[index].currentValue > 0) {
+          // Calculate shares from existing value
+          updated[index].shares = updated[index].currentValue / (value as number);
+        }
       }
     } else if (field === 'lastUpdated') {
       updated[index].lastUpdated = value as string;
@@ -198,9 +204,11 @@ const PortfolioRebalancer = () => {
   
   const handleRefreshPrices = async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
+    
     if (symbols.length === 0) return;
     
     const priceData = await priceService.fetchMultiplePrices(symbols);
+    
     const updatedAssets = assets.map(asset => {
       const data = priceData.get(asset.symbol);
       if (data) {
@@ -210,10 +218,16 @@ const PortfolioRebalancer = () => {
           lastUpdated: data.timestamp,
           priceSource: 'api' as const
         };
-        // Calculate shares if we have current value and new price
-        if (updatedAsset.currentValue > 0 && data.price > 0) {
+        
+        // Prioritize shares over value when updating prices
+        if (updatedAsset.shares && updatedAsset.shares > 0 && data.price > 0) {
+          // Update value based on existing shares (this preserves exact share count)
+          updatedAsset.currentValue = updatedAsset.shares * data.price;
+        } else if (updatedAsset.currentValue > 0 && data.price > 0) {
+          // Calculate shares from existing value (only if no shares exist)
           updatedAsset.shares = updatedAsset.currentValue / data.price;
         }
+        
         return updatedAsset;
       }
       return asset;
@@ -276,7 +290,7 @@ const PortfolioRebalancer = () => {
                     onChange={(e) => {
                       const value = parseFloat(e.target.value) || 0;
                       if (value >= 0.01 && value <= 1000000) {
-                        setNewMoney(value);
+                        setNewMoney(parseFloat(value.toFixed(2)));
                       } else if (value < 0.01) {
                         setNewMoney(0.01);
                       } else if (value > 1000000) {
@@ -391,7 +405,9 @@ const PortfolioRebalancer = () => {
                                   className="font-semibold"
                                 />
                                 <div className="text-xs text-gray-400 mt-1">
-                                  <span>{allocation.newPercentage.toFixed(1)}%</span>
+                                  <span className="px-1.5 py-0.5 bg-gray-800/50 rounded text-gray-300">
+                                    {allocation.newPercentage.toFixed(1)}%
+                                  </span>
                                   <span className={`ml-2 font-medium ${textColor}`}>
                                     ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
                                   </span>

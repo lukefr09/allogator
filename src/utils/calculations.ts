@@ -27,8 +27,8 @@ export const calculateAllocations = (
     
     results[index] = {
       symbol: asset.symbol,
-      amountToAdd: toAllocate / 100,
-      newValue: asset.currentValue + (toAllocate / 100),
+      amountToAdd: parseFloat((toAllocate / 100).toFixed(2)),
+      newValue: parseFloat((asset.currentValue + (toAllocate / 100)).toFixed(2)),
       newPercentage: ((currentValueCents + toAllocate) / (newTotal * 100)) * 100,
       targetPercentage,
       difference: 0
@@ -47,7 +47,7 @@ export const calculateAllocations = (
         const proportionalAmount = Math.round(remainingMoney * proportion);
         const toAllocate = Math.min(proportionalAmount, remainingMoney - allocatedInSecondPass);
         
-        results[index].amountToAdd += toAllocate / 100;
+        results[index].amountToAdd = parseFloat((results[index].amountToAdd + (toAllocate / 100)).toFixed(2));
         allocatedInSecondPass += toAllocate;
       }
     });
@@ -59,12 +59,12 @@ export const calculateAllocations = (
   if (remainingMoney > 0) {
     // Give remaining cents to the most underweight position
     const mostUnderweightIndex = assetsWithDeviation[0].index;
-    results[mostUnderweightIndex].amountToAdd += remainingMoney / 100;
+    results[mostUnderweightIndex].amountToAdd = parseFloat((results[mostUnderweightIndex].amountToAdd + (remainingMoney / 100)).toFixed(2));
   }
   
   // Calculate final values and differences
   results.forEach((result, index) => {
-    result.newValue = assets[index].currentValue + result.amountToAdd;
+    result.newValue = parseFloat((assets[index].currentValue + result.amountToAdd).toFixed(2));
     result.newPercentage = (result.newValue / newTotal) * 100;
     result.difference = result.newPercentage - result.targetPercentage;
   });

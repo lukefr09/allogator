@@ -8,30 +8,29 @@ interface ViewModeToggleProps {
 
 const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onViewModeChange }) => {
   return (
-    <div className="flex items-center gap-2 glass-light px-3 py-2 rounded-lg">
-      <span className="text-xs text-gray-400 font-medium">View:</span>
-      <div className="flex bg-gray-800 rounded-md p-0.5">
-        <button
-          onClick={() => onViewModeChange('money')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 ${
-            viewMode === 'money'
-              ? 'bg-blue-500 text-white shadow-sm'
-              : 'text-gray-400 hover:text-gray-300'
-          }`}
-        >
-          $ Money
-        </button>
-        <button
-          onClick={() => onViewModeChange('shares')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-all duration-200 ${
-            viewMode === 'shares'
-              ? 'bg-blue-500 text-white shadow-sm'
-              : 'text-gray-400 hover:text-gray-300'
-          }`}
-        >
-          # Shares
-        </button>
-      </div>
+    <div className="flex bg-gray-800/50 rounded-md p-0.5 border border-gray-700">
+      <button
+        onClick={() => onViewModeChange('money')}
+        className={`px-2 py-1 text-sm rounded transition-all duration-200 flex items-center gap-1 ${
+          viewMode === 'money'
+            ? 'bg-blue-500/20 text-blue-400 shadow-sm'
+            : 'text-gray-500 hover:text-gray-400'
+        }`}
+        title="Money view"
+      >
+        💵
+      </button>
+      <button
+        onClick={() => onViewModeChange('shares')}
+        className={`px-2 py-1 text-sm rounded transition-all duration-200 flex items-center gap-1 ${
+          viewMode === 'shares'
+            ? 'bg-blue-500/20 text-blue-400 shadow-sm'
+            : 'text-gray-500 hover:text-gray-400'
+        }`}
+        title="Shares view"
+      >
+        #
+      </button>
     </div>
   );
 };
