@@ -283,7 +283,7 @@ const PortfolioRebalancer = () => {
             </div>
             
             {/* Right Column - Calculations */}
-            <div className="space-y-6 relative z-0">
+            <div className="space-y-6 relative z-0 overflow-visible">
               {/* Validation Errors */}
               {validationErrors.length > 0 && (
                 <GlassCard variant="default" padding="md" className="border-red-500/20">
@@ -306,9 +306,17 @@ const PortfolioRebalancer = () => {
               {/* Allocation Results */}
               {validationErrors.length === 0 && allocations.length > 0 && (
                 <>
-                  <GlassCard variant="light" padding="lg" animate>
-                    <h2 className="text-xl font-semibold text-gray-100 mb-4">
+                  <GlassCard variant="light" padding="lg" animate allowOverflow={true}>
+                    <h2 className="text-xl font-semibold text-gray-100 mb-4 relative">
                       How to Allocate <AnimatedNumber value={newMoney} prefix="$" className="text-emerald-400" />
+                      <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
+                        <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                          Recommended amounts to invest in each asset<br/>to maintain your target allocation
+                        </span>
+                      </span>
                     </h2>
                     <div className="space-y-3">
                       {allocations.map((allocation, index) => (
@@ -336,17 +344,29 @@ const PortfolioRebalancer = () => {
                     </div>
                   </GlassCard>
                   
-                  <GlassCard variant="dark" padding="lg" animate>
+                  <GlassCard variant="dark" padding="lg" animate allowOverflow={true}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-100">After Investment</h3>
+                      <h3 className="text-lg font-semibold text-gray-100 relative">
+                        After Investment
+                        <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
+                          <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                            Your portfolio values and allocations<br/>after investing the new money
+                          </span>
+                        </span>
+                      </h3>
                       <button
                         onClick={handleShare}
-                        className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative"
-                        title="Share portfolio"
+                        className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative group/tooltip"
                       >
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                         </svg>
+                        <span className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                          Copy shareable link to clipboard
+                        </span>
                         {showShareSuccess && (
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-xs text-green-400 rounded whitespace-nowrap">
                             Copied!
@@ -355,14 +375,23 @@ const PortfolioRebalancer = () => {
                       </button>
                     </div>
                     <div className="text-xs text-gray-400 mb-4 flex items-center gap-4">
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
                         <span className="w-2 h-2 bg-emerald-400 rounded-full"></span> On target
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          Less than 0.5% difference<br/>from target allocation
+                        </span>
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
                         <span className="w-2 h-2 bg-yellow-400 rounded-full"></span> Slightly off
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          0.5% to 2% difference<br/>from target allocation
+                        </span>
                       </span>
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
                         <span className="w-2 h-2 bg-red-400 rounded-full"></span> Needs rebalancing
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          More than 2% difference<br/>from target allocation
+                        </span>
                       </span>
                     </div>
                     <div className="space-y-3">
@@ -399,17 +428,28 @@ const PortfolioRebalancer = () => {
                                   className="font-semibold"
                                 />
                                 <div className="text-xs text-gray-400 mt-1 flex items-center justify-end gap-2">
-                                  <span className="px-1.5 py-0.5 bg-gray-700/50 rounded text-gray-400">
+                                  <span className="px-1.5 py-0.5 bg-gray-700/50 rounded text-gray-400 cursor-help group/tooltip relative">
                                     {currentPercentage.toFixed(1)}%
+                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                                      Current allocation before<br/>investing new money
+                                    </span>
                                   </span>
                                   <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                   </svg>
-                                  <span className="px-1.5 py-0.5 bg-gray-800/50 rounded text-gray-300">
+                                  <span className="px-1.5 py-0.5 bg-gray-800/50 rounded text-gray-300 cursor-help group/tooltip relative">
                                     {allocation.newPercentage.toFixed(1)}%
+                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                                      New allocation after<br/>investing ${newMoney.toLocaleString()}
+                                    </span>
                                   </span>
-                                  <span className={`font-medium ${textColor}`}>
+                                  <span className={`font-medium ${textColor} cursor-help group/tooltip relative`}>
                                     ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
+                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                                      This is the difference between the new<br/>
+                                      allocation ({allocation.newPercentage.toFixed(1)}%) and target ({(asset?.targetPercentage * 100).toFixed(1)}%)<br/>
+                                      {absDiff < 0.5 ? 'Perfectly balanced ✓' : absDiff < 2 ? 'Close to target' : 'Consider rebalancing'}
+                                    </span>
                                   </span>
                                 </div>
                               </div>

@@ -48,7 +48,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
   const isMaxAssets = currentAssetsCount >= 20;
 
   return (
-    <GlassCard variant="default" padding="md" className="mb-6">
+    <GlassCard variant="default" padding="md" className="mb-6" allowOverflow={true}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-100">Add New Asset</h3>
         <div className="flex items-center gap-2">
@@ -59,8 +59,17 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
         </div>
       </div>
       
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form onSubmit={handleSubmit} className="flex gap-3 overflow-visible">
         <div className="flex-1 relative">
+          <label className="absolute -top-5 left-0 text-xs font-medium text-gray-400 relative">
+            Symbol
+            <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+              ⓘ
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                Enter the ticker symbol<br/>for the asset to add
+              </span>
+            </span>
+          </label>
           <input
             ref={symbolInputRef}
             type="text"
@@ -81,6 +90,15 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
         </div>
         
         <div className="w-32 relative">
+          <label className="absolute -top-5 left-0 text-xs font-medium text-gray-400 relative">
+            Target %
+            <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+              ⓘ
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                Target allocation percentage<br/>for this asset in your portfolio
+              </span>
+            </span>
+          </label>
           <input
             type="number"
             placeholder="Target"
@@ -92,13 +110,13 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
             max="100"
             disabled={isMaxAssets}
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pt-1">%</span>
         </div>
         
         <button
           type="submit"
           className={`
-            relative px-6 py-3 font-medium rounded-lg transition-all duration-300
+            relative px-4 py-3 font-medium rounded-lg transition-all duration-300 mt-5
             ${isMaxAssets 
               ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
               : isAdding
@@ -131,11 +149,6 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
         </div>
       )}
       
-      {!symbol && !targetPercentage && !isMaxAssets && (
-        <p className="text-xs text-gray-500 mt-3">
-          Tip: Press Tab to move between fields, Enter to add
-        </p>
-      )}
     </GlassCard>
   );
 };

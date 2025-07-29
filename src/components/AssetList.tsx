@@ -118,7 +118,15 @@ const AssetList: React.FC<AssetListProps> = ({
               <div className="flex gap-3 sm:contents">
                 {/* Symbol Input */}
                 <div className="flex-1 sm:flex-initial overflow-visible">
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Symbol</label>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
+                    Symbol
+                    <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                      ⓘ
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                        The ticker symbol for your asset<br/>(e.g., AAPL, VOO, BTC-USD)
+                      </span>
+                    </span>
+                  </label>
                 <input
                   type="text"
                   defaultValue={asset.symbol}
@@ -137,7 +145,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   className="glass-input w-full font-semibold text-lg tabular-nums"
                   placeholder="AAPL"
                 />
-                <div className="mt-2 text-xs text-gray-500 flex items-center justify-between relative" style={{zIndex: 999}}>
+                <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between relative" style={{zIndex: 999}}>
                   {asset.currentPrice && (
                     <>
                       <div>
@@ -195,7 +203,15 @@ const AssetList: React.FC<AssetListProps> = ({
                 <div className="flex-1 sm:flex-initial sm:w-44 overflow-visible">
                 {viewMode === 'money' ? (
                   <>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Value</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
+                      Current Value
+                      <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                        ⓘ
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          The total dollar value of this asset<br/>in your current portfolio
+                        </span>
+                      </span>
+                    </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                       <input
@@ -237,7 +253,15 @@ const AssetList: React.FC<AssetListProps> = ({
                   </>
                 ) : (
                   <>
-                    <label className="block text-xs font-medium text-gray-400 mb-1.5">Shares</label>
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
+                      Shares
+                      <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                        ⓘ
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          The number of shares you own<br/>(requires price to be set)
+                        </span>
+                      </span>
+                    </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">#</span>
                       <input
@@ -362,8 +386,13 @@ const AssetList: React.FC<AssetListProps> = ({
               {currentTotal > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500">Current allocation</span>
-                  <span className="px-2 py-1 bg-gray-800/50 rounded text-gray-300 font-medium tabular-nums text-xs">
+                  <span className="px-2 py-1 bg-gray-800/50 rounded text-gray-300 font-medium tabular-nums text-xs cursor-help group/tooltip relative">
                     {((asset.currentValue / currentTotal) * 100).toFixed(1)}%
+                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                      Current: {((asset.currentValue / currentTotal) * 100).toFixed(1)}%<br/>
+                      Target: {(asset.targetPercentage * 100).toFixed(1)}%<br/>
+                      Difference: {(((asset.currentValue / currentTotal) - asset.targetPercentage) * 100).toFixed(1)}%
+                    </span>
                   </span>
                 </div>
               )}

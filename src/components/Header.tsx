@@ -26,7 +26,15 @@ const Header: React.FC<HeaderProps> = ({ newMoney, onNewMoneyChange }) => {
             
             {/* New Money Input */}
             <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-              <label className="text-xs sm:text-sm font-semibold text-gray-300 whitespace-nowrap">New Money</label>
+              <label className="text-xs sm:text-sm font-semibold text-gray-300 whitespace-nowrap relative">
+                New Money
+                <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                  ⓘ
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                    Amount you want to invest<br/>in your portfolio today
+                  </span>
+                </span>
+              </label>
               <div className="relative flex-1 sm:flex-initial">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                 <input
