@@ -5,6 +5,7 @@ import AddAsset from './components/AddAsset';
 import AssetList from './components/AssetList';
 import GlassCard from './components/GlassCard';
 import AnimatedNumber from './components/AnimatedNumber';
+import Skeleton from './components/Skeleton';
 import { validatePortfolio, calculateTotalPercentage } from './utils/validation';
 import { calculateAllocations } from './utils/calculations';
 import { priceService } from './services/priceService';
@@ -319,20 +320,37 @@ const PortfolioRebalancer = () => {
                       </span>
                     </h2>
                     <div className="space-y-3">
-                      {allocations.map((allocation, index) => (
-                        <div
-                          key={allocation.symbol}
-                          className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          <span className="font-medium text-gray-200">{allocation.symbol}</span>
-                          <AnimatedNumber
-                            value={allocation.amountToAdd}
-                            prefix="$"
-                            className="text-emerald-400 font-semibold"
-                          />
-                        </div>
-                      ))}
+                      {isLoadingPrices && allocations.length === 0 ? (
+                        <>
+                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                            <Skeleton width="60px" height="20px" />
+                            <Skeleton width="80px" height="20px" />
+                          </div>
+                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                            <Skeleton width="60px" height="20px" />
+                            <Skeleton width="80px" height="20px" />
+                          </div>
+                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                            <Skeleton width="60px" height="20px" />
+                            <Skeleton width="80px" height="20px" />
+                          </div>
+                        </>
+                      ) : (
+                        allocations.map((allocation, index) => (
+                          <div
+                            key={allocation.symbol}
+                            className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <span className="font-medium text-gray-200">{allocation.symbol}</span>
+                            <AnimatedNumber
+                              value={allocation.amountToAdd}
+                              prefix="$"
+                              className="text-emerald-400 font-semibold"
+                            />
+                          </div>
+                        ))
+                      )}
                       <div className="flex justify-between items-center pt-4 mt-4 border-t border-white/10">
                         <span className="font-bold text-gray-100">Total</span>
                         <AnimatedNumber
@@ -395,7 +413,27 @@ const PortfolioRebalancer = () => {
                       </span>
                     </div>
                     <div className="space-y-3">
-                      {allocations.map((allocation, index) => {
+                      {isLoadingPrices && allocations.length === 0 ? (
+                        <>
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="glass-light p-3 rounded-lg">
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-2">
+                                  <Skeleton variant="circular" width="8px" height="8px" />
+                                  <Skeleton width="60px" height="16px" />
+                                </div>
+                                <div className="text-right">
+                                  <Skeleton width="80px" height="20px" />
+                                  <div className="mt-2">
+                                    <Skeleton width="120px" height="14px" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        allocations.map((allocation, index) => {
                         const asset = assets.find(a => a.symbol === allocation.symbol);
                         const currentPercentage = currentTotal > 0 ? ((asset?.currentValue || 0) / currentTotal) * 100 : 0;
                         const absDiff = Math.abs(allocation.difference);
@@ -456,7 +494,8 @@ const PortfolioRebalancer = () => {
                             </div>
                           </div>
                         );
-                      })}
+                      })
+                      )}
                       <div className="pt-4 mt-4 border-t border-white/10">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-gray-100">New Total</span>

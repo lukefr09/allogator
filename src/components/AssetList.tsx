@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Asset, ViewMode } from '../types';
 import GlassCard from './GlassCard';
 import ViewModeToggle from './ViewModeToggle';
+import Skeleton from './Skeleton';
 import { formatCurrency, formatShares } from '../utils/formatters';
 
 interface AssetListProps {
@@ -117,7 +118,7 @@ const AssetList: React.FC<AssetListProps> = ({
               {/* Top Row on Mobile: Symbol and Value/Shares */}
               <div className="flex gap-3 sm:contents">
                 {/* Symbol Input */}
-                <div className="flex-1 sm:flex-initial overflow-visible">
+                <div className="flex-1 sm:flex-initial sm:w-44 overflow-visible">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
                     Symbol
                     <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
@@ -142,11 +143,13 @@ const AssetList: React.FC<AssetListProps> = ({
                       e.currentTarget.blur(); // Trigger blur to save
                     }
                   }}
-                  className="glass-input w-full font-semibold text-lg tabular-nums"
+                  className="glass-input w-full font-semibold tabular-nums"
                   placeholder="AAPL"
                 />
                 <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between relative" style={{zIndex: 999}}>
-                  {asset.currentPrice && (
+                  {asset.symbol && !asset.currentPrice && isLoadingPrices ? (
+                    <Skeleton width="120px" height="14px" />
+                  ) : asset.currentPrice ? (
                     <>
                       <div>
                         <span className="font-medium text-gray-400">{asset.symbol}</span>
@@ -195,7 +198,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         </button>
                       )}
                     </>
-                  )}
+                  ) : null}
                   </div>
                 </div>
                 
@@ -239,7 +242,9 @@ const AssetList: React.FC<AssetListProps> = ({
                       />
                     </div>
                     <div className="mt-2 text-xs text-gray-500 overflow-visible whitespace-nowrap relative" style={{zIndex: 999}}>
-                      {asset.currentPrice && asset.currentValue > 0 && (
+                      {asset.symbol && !asset.currentPrice && isLoadingPrices ? (
+                        <Skeleton width="140px" height="14px" />
+                      ) : asset.currentPrice && asset.currentValue > 0 ? (
                         <>
                           <span className="font-medium text-gray-400">
                             {(asset.shares || (asset.currentValue / asset.currentPrice)).toFixed(3)}
@@ -248,7 +253,7 @@ const AssetList: React.FC<AssetListProps> = ({
                           <span className="mx-1">=</span>
                           <span className="font-medium text-gray-300">{formatCurrency(asset.currentValue)}</span>
                         </>
-                      )}
+                      ) : null}
                     </div>
                   </>
                 ) : (
