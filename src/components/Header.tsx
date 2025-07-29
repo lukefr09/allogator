@@ -62,4 +62,4 @@ const Header: React.FC<HeaderProps> = ({ newMoney, onNewMoneyChange }) => {
   );
 };
 
-export default Header;
+export default React.memo(Header);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Asset, AllocationResult, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
@@ -54,7 +54,7 @@ const PortfolioRebalancer = () => {
     newAsset?: Omit<Asset, 'currentValue'>;
   } | null>(null);
   
-  const totalPercentage = calculateTotalPercentage(assets);
+  const totalPercentage = useMemo(() => calculateTotalPercentage(assets), [assets]);
   
   // Store initial load flag in a ref to prevent re-runs
   const hasInitializedRef = React.useRef(false);
@@ -243,19 +243,19 @@ const PortfolioRebalancer = () => {
     setAssets(assets.filter((_, i) => i !== index));
   };
   
-  const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
-  const newTotal = currentTotal + newMoney;
+  const currentTotal = useMemo(() => assets.reduce((sum, asset) => sum + asset.currentValue, 0), [assets]);
+  const newTotal = useMemo(() => currentTotal + newMoney, [currentTotal, newMoney]);
   
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     const url = encodePortfolioToUrl(assets, newMoney);
     const success = await copyToClipboard(url);
     if (success) {
       setShowShareSuccess(true);
       setTimeout(() => setShowShareSuccess(false), 3000);
     }
-  };
+  }, [assets, newMoney]);
   
-  const handleRefreshPrices = async () => {
+  const handleRefreshPrices = useCallback(async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
     
     if (symbols.length === 0) return;
@@ -305,7 +305,7 @@ const PortfolioRebalancer = () => {
     } finally {
       setIsLoadingPrices(false);
     }
-  };
+  }, [assets]);
   
   const handleDisambiguationChoice = async (choice: 'stock' | 'crypto', exchange?: 'binance' | 'coinbase') => {
     if (!disambiguationDialog) return;

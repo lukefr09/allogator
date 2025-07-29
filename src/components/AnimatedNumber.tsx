@@ -68,4 +68,4 @@ const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   );
 };
 
-export default AnimatedNumber;
+export default React.memo(AnimatedNumber);

@@ -4,9 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Preconnect to font domains for faster loading -->
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Load fonts with font-display: swap for better performance -->
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet">
     <title>Allogator - Smart Investing Made Simple</title>
     <meta name="description" content="Optimize your investment portfolio with precision. Calculate exact allocation amounts to maintain your target percentages." />
+    <!-- Critical CSS to prevent layout shifts -->
+    <style>
+      #root{min-height:100vh;background:#0f172a}
+      .glass{backdrop-filter:blur(12px);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
+      .skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.1),rgba(255,255,255,0.2),rgba(255,255,255,0.1));background-size:200% 100%;animation:shimmer 1.5s infinite}
+      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    </style>
     <meta property="og:title" content="Allogator - Smart Investing Made Simple" />
     <meta property="og:description" content="Optimize your investment portfolio with precision. Calculate exact allocation amounts to maintain your target percentages." />
     <meta property="og:type" content="website" />
