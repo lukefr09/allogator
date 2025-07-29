@@ -13,7 +13,7 @@ import { priceService } from './services/priceService';
 import { encodePortfolioToUrl, decodePortfolioFromUrl, copyToClipboard } from './utils/urlSharing';
 import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from './utils/cryptoAliases';
 import { getDisplayName } from './utils/displayNames';
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
@@ -666,6 +666,7 @@ const PortfolioRebalancer = () => {
           onCancel={() => setDisambiguationDialog(null)}
         />
       )}
+      <Analytics />
     </>
   );
 };
