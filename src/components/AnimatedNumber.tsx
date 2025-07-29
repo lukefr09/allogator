@@ -56,9 +56,14 @@ const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     };
   }, [value, duration]);
   
+  const formattedValue = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(displayValue);
+  
   return (
     <span className={`tabular-nums ${className}`}>
-      {prefix}{displayValue.toFixed(decimals)}{suffix}
+      {prefix}{formattedValue}{suffix}
     </span>
   );
 };

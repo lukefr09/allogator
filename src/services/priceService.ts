@@ -14,6 +14,9 @@ class PriceService {
   private cacheTimeout = 300000; // 5 minute cache (shorter since we have better rate limits)
   private apiKey: string;
   private baseUrl: string;
+  private requestQueue: Promise<any> = Promise.resolve();
+  private lastRequestTime = 0;
+  private minRequestInterval = 1100; // 1.1 seconds between requests to avoid rate limits
   
   constructor(config: PriceServiceConfig) {
     this.apiKey = config.apiKey;
@@ -31,56 +34,67 @@ class PriceService {
       return { symbol, price: cached.price, timestamp: cached.timestamp };
     }
 
-    const url = `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.apiKey}`;
-    
-    try {
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    // Queue the request to avoid rate limits
+    return this.requestQueue = this.requestQueue.then(async () => {
+      // Check cache again in case another request already fetched it
+      const cachedAgain = this.cache.get(symbol);
+      if (cachedAgain && Date.now() - new Date(cachedAgain.timestamp).getTime() < this.cacheTimeout) {
+        return { symbol, price: cachedAgain.price, timestamp: cachedAgain.timestamp };
       }
-      
-      const data = await response.json();
-      
-      // Check for API error response
-      if (data.error) {
-        throw new Error(`API Error: ${data.error}`);
+
+      // Enforce minimum time between requests
+      const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+      if (timeSinceLastRequest < this.minRequestInterval) {
+        await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
       }
+
+      const url = `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.apiKey}`;
       
-      // Finnhub returns current price in 'c' field
-      if (data.c === undefined || data.c === null) {
-        throw new Error(`No price data found for symbol: ${symbol}`);
+      try {
+        this.lastRequestTime = Date.now();
+        const response = await fetch(url);
+        
+        if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Check for API error response
+        if (data.error) {
+          throw new Error(`API Error: ${data.error}`);
+        }
+        
+        // Finnhub returns current price in 'c' field
+        if (data.c === undefined || data.c === null || data.c === 0) {
+          throw new Error(`No valid price data found for symbol: ${symbol}`);
+        }
+        
+        const price = parseFloat(data.c.toString());
+        const timestamp = new Date().toISOString();
+        
+        this.cache.set(symbol, { price, timestamp });
+        
+        return { symbol, price, timestamp };
+      } catch (error) {
+        console.error(`Failed to fetch price for ${symbol}:`, error);
+        return null;
       }
-      
-      const price = parseFloat(data.c.toString());
-      const timestamp = new Date().toISOString();
-      
-      this.cache.set(symbol, { price, timestamp });
-      
-      return { symbol, price, timestamp };
-    } catch (error) {
-      console.error(`Failed to fetch price for ${symbol}:`, error);
-      return null;
-    }
+    });
   }
 
   async fetchMultiplePrices(symbols: string[]): Promise<Map<string, PriceData | null>> {
     const results = new Map<string, PriceData | null>();
     
-    // Finnhub allows 60 calls per minute, so we can fetch in parallel with small delays
-    const promises = symbols.map(async (symbol, index) => {
-      // Small staggered delay to avoid hitting rate limits
-      if (index > 0) {
-        await new Promise(resolve => setTimeout(resolve, index * 100)); // 100ms stagger
-      }
+    // Fetch prices sequentially through the queue to avoid rate limits
+    for (const symbol of symbols) {
       const priceData = await this.fetchPrice(symbol);
-      return { symbol, priceData };
-    });
-    
-    const responses = await Promise.all(promises);
-    responses.forEach(({ symbol, priceData }) => {
       results.set(symbol, priceData);
-    });
+    }
     
     return results;
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Asset, AllocationResult, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
@@ -8,30 +8,56 @@ import AnimatedNumber from './components/AnimatedNumber';
 import { validatePortfolio, calculateTotalPercentage } from './utils/validation';
 import { calculateAllocations } from './utils/calculations';
 import { priceService } from './services/priceService';
+import { encodePortfolioToUrl, decodePortfolioFromUrl, copyToClipboard } from './utils/urlSharing';
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
-    { symbol: 'VOO', currentValue: 0, targetPercentage: 0.50 },
-    { symbol: 'QQQ', currentValue: 0, targetPercentage: 0.30 },
-    { symbol: 'NVDA', currentValue: 0, targetPercentage: 0.20 }
+    { symbol: 'VOO', currentValue: 600, targetPercentage: 0.50 },
+    { symbol: 'QQQ', currentValue: 300, targetPercentage: 0.30 },
+    { symbol: 'NVDA', currentValue: 100, targetPercentage: 0.20 }
   ];
   
-  const [assets, setAssets] = useState<Asset[]>(defaultAssets);
-  const [newMoney, setNewMoney] = useState(1000);
+  // Initialize state with URL data if available, otherwise use defaults
+  const getInitialState = () => {
+    const portfolioData = decodePortfolioFromUrl();
+    if (portfolioData) {
+      return {
+        assets: portfolioData.assets,
+        newMoney: portfolioData.newMoney
+      };
+    }
+    return {
+      assets: defaultAssets,
+      newMoney: 1000
+    };
+  };
+
+  const initialState = getInitialState();
+  const [assets, setAssets] = useState<Asset[]>(initialState.assets);
+  const [newMoney, setNewMoney] = useState(initialState.newMoney);
   const [allocations, setAllocations] = useState<AllocationResult[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('money');
   const [priceError, setPriceError] = useState<string | undefined>();
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+  const [showShareSuccess, setShowShareSuccess] = useState(false);
   
   const totalPercentage = calculateTotalPercentage(assets);
   
+  // Store initial load flag in a ref to prevent re-runs
+  const hasInitializedRef = React.useRef(false);
   
-  // Fetch prices after assets are loaded
+  // Fetch prices once after initial render
   useEffect(() => {
-    if (assets.length > 0) {
-      handleRefreshPrices();
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      // Delay to ensure all components are mounted
+      setTimeout(() => {
+        if (assets.length > 0 && assets.some(a => a.symbol.trim() !== '')) {
+          handleRefreshPrices();
+        }
+      }, 100);
     }
   }, []);
   
@@ -99,7 +125,7 @@ const PortfolioRebalancer = () => {
             
             // Update shares if we have a current value
             if (updated[index].currentValue > 0 && priceData.price > 0) {
-              updated[index].shares = updated[index].currentValue / priceData.price;
+              updated[index].shares = Math.round((updated[index].currentValue / priceData.price) * 1000000) / 1000000;
             }
             
             setLastPriceUpdate(new Date().toISOString());
@@ -127,7 +153,7 @@ const PortfolioRebalancer = () => {
       updated[index].currentValue = value as number;
       // Only update shares from value if we don't already have shares (i.e., in money mode)
       if (updated[index].currentPrice && updated[index].currentPrice > 0 && !updated[index].shares) {
-        updated[index].shares = (value as number) / updated[index].currentPrice!;
+        updated[index].shares = Math.round(((value as number) / updated[index].currentPrice!) * 1000000) / 1000000;
       }
     } else if (field === 'shares') {
       updated[index].shares = value as number;
@@ -146,7 +172,7 @@ const PortfolioRebalancer = () => {
           updated[index].currentValue = updated[index].shares! * (value as number);
         } else if (updated[index].currentValue > 0) {
           // Calculate shares from existing value
-          updated[index].shares = updated[index].currentValue / (value as number);
+          updated[index].shares = Math.round((updated[index].currentValue / (value as number)) * 1000000) / 1000000;
         }
       }
     } else if (field === 'lastUpdated') {
@@ -164,48 +190,15 @@ const PortfolioRebalancer = () => {
   
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
-  const isEmpty = currentTotal === 0;
   
-  const handleLoadExample = async () => {
-    const exampleAssets: Asset[] = [
-      { symbol: 'VOO', currentValue: 600, targetPercentage: 0.50 },
-      { symbol: 'QQQ', currentValue: 300, targetPercentage: 0.30 },
-      { symbol: 'NVDA', currentValue: 100, targetPercentage: 0.20 }
-    ];
-    setAssets(exampleAssets);
-    
-    // Fetch prices for example assets
-    setIsLoadingPrices(true);
-    setPriceError(undefined);
-    
-    try {
-      const symbols = exampleAssets.map(asset => asset.symbol);
-      const priceData = await priceService.fetchMultiplePrices(symbols);
-      
-      const updatedAssets = exampleAssets.map(asset => {
-        const data = priceData.get(asset.symbol);
-        if (data) {
-          return {
-            ...asset,
-            currentPrice: data.price,
-            lastUpdated: data.timestamp,
-            priceSource: 'api' as const,
-            shares: asset.currentValue / data.price
-          };
-        }
-        return asset;
-      });
-      
-      setAssets(updatedAssets);
-      setLastPriceUpdate(new Date().toISOString());
-    } catch (error) {
-      console.error('Failed to fetch prices for example:', error);
-      setPriceError('Unable to fetch prices. Please enter them manually.');
-    } finally {
-      setIsLoadingPrices(false);
+  const handleShare = async () => {
+    const url = encodePortfolioToUrl(assets, newMoney);
+    const success = await copyToClipboard(url);
+    if (success) {
+      setShowShareSuccess(true);
+      setTimeout(() => setShowShareSuccess(false), 3000);
     }
   };
-  
   
   const handleRefreshPrices = async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
@@ -234,7 +227,7 @@ const PortfolioRebalancer = () => {
           updatedAsset.currentValue = updatedAsset.shares * data.price;
         } else if (updatedAsset.currentValue > 0 && data.price > 0) {
           // Calculate shares from existing value (only if no shares exist)
-          updatedAsset.shares = updatedAsset.currentValue / data.price;
+          updatedAsset.shares = Math.round((updatedAsset.currentValue / data.price) * 1000000) / 1000000;
         }
         
         return updatedAsset;
@@ -262,13 +255,13 @@ const PortfolioRebalancer = () => {
     <>
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="min-h-screen pt-24 sm:pt-32 pb-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="h-screen pt-24 sm:pt-32 overflow-hidden">
+        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6">
           
           {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Left Column - Portfolio Management */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8 h-[calc(100%-2rem)]">
+            {/* Left Column - Portfolio Management (Scrollable) */}
+            <div className="lg:col-span-2 space-y-6 relative z-10 lg:overflow-y-auto lg:overflow-x-hidden lg:pr-4 lg:pb-8 scrollbar-hide">
               {/* Asset List */}
               <AssetList
                 assets={assets}
@@ -289,27 +282,8 @@ const PortfolioRebalancer = () => {
               />
             </div>
             
-            {/* Right Column - Calculations */}
-            <div className="space-y-6">
-              {/* Empty State Message */}
-              {isEmpty && validationErrors.length === 0 && (
-                <GlassCard variant="light" padding="lg" animate>
-                  <div className="text-center">
-                    <h3 className="text-xl font-semibold text-gray-100 mb-3">
-                      Welcome to Portfolio Rebalancer!
-                    </h3>
-                    <p className="text-gray-300 mb-6">
-                      Add your current holdings or start fresh with ${newMoney}
-                    </p>
-                    <button
-                      onClick={handleLoadExample}
-                      className="px-6 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 font-medium rounded-lg transition-colors duration-200"
-                    >
-                      Load Example Portfolio
-                    </button>
-                  </div>
-                </GlassCard>
-              )}
+            {/* Right Column - Calculations (Scrollable) */}
+            <div className="space-y-6 relative z-0 lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)] lg:overflow-y-auto lg:overflow-x-hidden scrollbar-hide">
               {/* Validation Errors */}
               {validationErrors.length > 0 && (
                 <GlassCard variant="default" padding="md" className="border-red-500/20">
@@ -363,7 +337,23 @@ const PortfolioRebalancer = () => {
                   </GlassCard>
                   
                   <GlassCard variant="dark" padding="lg" animate>
-                    <h3 className="text-lg font-semibold text-gray-100 mb-3">After Investment</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-100">After Investment</h3>
+                      <button
+                        onClick={handleShare}
+                        className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative"
+                        title="Share portfolio"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                        </svg>
+                        {showShareSuccess && (
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-xs text-green-400 rounded whitespace-nowrap">
+                            Copied!
+                          </span>
+                        )}
+                      </button>
+                    </div>
                     <div className="text-xs text-gray-400 mb-4 flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-emerald-400 rounded-full"></span> On target
@@ -377,6 +367,8 @@ const PortfolioRebalancer = () => {
                     </div>
                     <div className="space-y-3">
                       {allocations.map((allocation, index) => {
+                        const asset = assets.find(a => a.symbol === allocation.symbol);
+                        const currentPercentage = currentTotal > 0 ? ((asset?.currentValue || 0) / currentTotal) * 100 : 0;
                         const absDiff = Math.abs(allocation.difference);
                         let statusColor = 'bg-emerald-400';
                         let textColor = 'text-emerald-400';
@@ -406,11 +398,17 @@ const PortfolioRebalancer = () => {
                                   prefix="$"
                                   className="font-semibold"
                                 />
-                                <div className="text-xs text-gray-400 mt-1">
+                                <div className="text-xs text-gray-400 mt-1 flex items-center justify-end gap-2">
+                                  <span className="px-1.5 py-0.5 bg-gray-700/50 rounded text-gray-400">
+                                    {currentPercentage.toFixed(1)}%
+                                  </span>
+                                  <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
                                   <span className="px-1.5 py-0.5 bg-gray-800/50 rounded text-gray-300">
                                     {allocation.newPercentage.toFixed(1)}%
                                   </span>
-                                  <span className={`ml-2 font-medium ${textColor}`}>
+                                  <span className={`font-medium ${textColor}`}>
                                     ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
                                   </span>
                                 </div>
@@ -435,11 +433,6 @@ const PortfolioRebalancer = () => {
               )}
             </div>
           </div>
-          
-          {/* Footer */}
-          <footer className="mt-16 text-center text-xs text-gray-500">
-            <p>Made by Luke</p>
-          </footer>
         </div>
       </div>
     </>

@@ -1,15 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    @apply overflow-hidden h-full;
+  }
+  
   body {
-    @apply bg-navy-900 text-gray-100;
+    @apply bg-navy-900 text-gray-100 text-base;
     font-feature-settings: 'tnum' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 18px;
+  }
+  
+  /* Light mode styles */
+  .light body {
+    @apply bg-gray-50 text-gray-900;
   }
   
   /* Subtle noise texture */
@@ -40,6 +51,12 @@
     z-index: 0;
   }
   
+  /* Light mode gradient */
+  .light body::after {
+    background: radial-gradient(ellipse at top left, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  }
+  
   #root {
     position: relative;
     z-index: 2;
@@ -55,11 +72,25 @@
       inset 0 2px 1px rgba(255, 255, 255, 0.08);
   }
   
+  .light .glass {
+    @apply bg-white/80 border-gray-200/60 backdrop-blur-lg;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 2px 1px rgba(255, 255, 255, 1);
+  }
+  
   .glass-light {
     @apply backdrop-blur-xl bg-glass-lightest border border-glass-border rounded-xl;
     box-shadow: 
       0 4px 24px rgba(0, 0, 0, 0.08),
       inset 0 1px 1px rgba(255, 255, 255, 0.06);
+  }
+  
+  .light .glass-light {
+    @apply bg-white/60 border-gray-200/40 backdrop-blur-md;
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.05),
+      inset 0 1px 1px rgba(255, 255, 255, 0.9);
   }
   
   .glass-hover {
@@ -82,12 +113,27 @@
       0 1px 1px rgba(255, 255, 255, 0.05);
   }
   
+  .light .glass-input {
+    @apply bg-white/90 border-gray-300/60 text-gray-900 placeholder-gray-500 backdrop-blur-sm;
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
   .glass-input:focus {
     @apply outline-none border-blue-500/50 bg-glass-lighter;
     box-shadow: 
       inset 0 2px 4px rgba(0, 0, 0, 0.1),
       0 0 0 3px rgba(59, 130, 246, 0.1),
       0 0 20px rgba(59, 130, 246, 0.2);
+  }
+  
+  .light .glass-input:focus {
+    @apply bg-white border-blue-500/60;
+    box-shadow: 
+      inset 0 2px 4px rgba(0, 0, 0, 0.03),
+      0 0 0 3px rgba(59, 130, 246, 0.15),
+      0 0 20px rgba(59, 130, 246, 0.15);
   }
   
   /* Button styles */
@@ -161,10 +207,12 @@
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 10px;
+    height: 10px;
   }
   
   ::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.02);
+    border-radius: 5px;
   }
   
   ::-webkit-scrollbar-thumb {
@@ -174,6 +222,32 @@
   
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.15);
+  }
+  
+  .light ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+  }
+  
+  .light ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  
+  .light ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Hide scrollbar for cleaner look but keep functionality */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 

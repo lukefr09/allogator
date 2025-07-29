@@ -7,6 +7,7 @@ interface GlassCardProps {
   hover?: boolean;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   animate?: boolean;
+  allowOverflow?: boolean;
 }
 
 const GlassCard: React.FC<GlassCardProps> = ({
@@ -16,8 +17,9 @@ const GlassCard: React.FC<GlassCardProps> = ({
   hover = false,
   padding = 'md',
   animate = false,
+  allowOverflow = false,
 }) => {
-  const baseClasses = 'backdrop-blur-xl rounded-2xl transition-all duration-300 relative overflow-hidden';
+  const baseClasses = `backdrop-blur-xl rounded-2xl transition-all duration-300 relative ${allowOverflow ? '' : 'overflow-hidden'}`;
   
   const variantClasses = {
     default: 'bg-glass-lighter border border-glass-border',

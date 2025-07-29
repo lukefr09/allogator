@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Asset, ViewMode } from '../types';
 import GlassCard from './GlassCard';
 import ViewModeToggle from './ViewModeToggle';
+import { formatCurrency, formatShares } from '../utils/formatters';
 
 interface AssetListProps {
   assets: Asset[];
@@ -37,14 +38,41 @@ const AssetList: React.FC<AssetListProps> = ({
   return (
     <GlassCard variant="dark" padding="lg" className="mb-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 relative z-20">
         <div>
           <h2 className="text-2xl font-semibold text-gray-100 mb-1">Portfolio Assets</h2>
           <p className="text-sm text-gray-400">
-            Current Portfolio Value: <span className="text-white font-semibold tabular-nums">${currentTotal.toFixed(2)}</span>
+            Current Portfolio Value: <span className="text-white font-semibold tabular-nums">{formatCurrency(currentTotal)}</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative z-10">
+          {lastPriceUpdate && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="hidden sm:inline">Prices updated: {new Date(lastPriceUpdate).toLocaleTimeString()}</span>
+              <span className="sm:hidden">Updated: {new Date(lastPriceUpdate).toLocaleTimeString()}</span>
+              {onRefreshPrices && (
+                <button
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    await onRefreshPrices();
+                    setIsRefreshing(false);
+                  }}
+                  disabled={isRefreshing || isLoadingPrices}
+                  className="p-1 hover:bg-gray-700 rounded transition-colors duration-200"
+                  title={isLoadingPrices ? "Loading prices..." : "Refresh prices"}
+                >
+                  <svg 
+                    className={`w-3 h-3 ${isRefreshing || isLoadingPrices ? 'animate-spin' : ''}`} 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
           <div className={`glass-light px-4 py-2 rounded-lg text-sm font-medium ${isValidTotal ? 'text-emerald-400' : 'text-red-400'}`}>
             <span className="text-gray-400 mr-2">Target Total:</span>
             {totalPercentage.toFixed(1)}%
@@ -62,33 +90,6 @@ const AssetList: React.FC<AssetListProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <span className="text-yellow-400 text-sm">{priceError}</span>
-        </div>
-      )}
-      
-      {lastPriceUpdate && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-          <span>Prices last updated: {new Date(lastPriceUpdate).toLocaleString()}</span>
-          {onRefreshPrices && (
-            <button
-              onClick={async () => {
-                setIsRefreshing(true);
-                await onRefreshPrices();
-                setIsRefreshing(false);
-              }}
-              disabled={isRefreshing || isLoadingPrices}
-              className="p-1 hover:bg-gray-700 rounded transition-colors duration-200"
-              title={isLoadingPrices ? "Loading prices..." : "Refresh prices"}
-            >
-              <svg 
-                className={`w-3 h-3 ${isRefreshing || isLoadingPrices ? 'animate-spin' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          )}
         </div>
       )}
       
@@ -142,7 +143,7 @@ const AssetList: React.FC<AssetListProps> = ({
                       <div>
                         <span className="font-medium text-gray-400">{asset.symbol}</span>
                         <span className="mx-1">@</span>
-                        <span className="font-medium text-gray-300">${asset.currentPrice.toFixed(2)}</span>
+                        <span className="font-medium text-gray-300">{formatCurrency(asset.currentPrice)}</span>
                         {asset.priceSource === 'manual' && (
                           <span className="ml-1 text-yellow-400">(manual)</span>
                         )}
@@ -225,11 +226,11 @@ const AssetList: React.FC<AssetListProps> = ({
                       {asset.currentPrice && asset.currentValue > 0 && (
                         <>
                           <span className="font-medium text-gray-400">
-                            {asset.shares ? asset.shares.toFixed(3) : (asset.currentValue / asset.currentPrice).toFixed(3)}
+                            {(asset.shares || (asset.currentValue / asset.currentPrice)).toFixed(3)}
                           </span>
                           <span className="ml-1">shares</span>
                           <span className="mx-1">=</span>
-                          <span className="font-medium text-gray-300">${asset.currentValue.toFixed(2)}</span>
+                          <span className="font-medium text-gray-300">{formatCurrency(asset.currentValue)}</span>
                         </>
                       )}
                     </div>
@@ -278,10 +279,10 @@ const AssetList: React.FC<AssetListProps> = ({
                     <div className="mt-2 h-5 text-xs text-gray-500">
                       {asset.currentPrice && asset.shares && asset.shares > 0 ? (
                         <>
-                          <span className="font-medium text-gray-400">{asset.shares?.toFixed(3)}</span>
+                          <span className="font-medium text-gray-400">{asset.shares.toFixed(3)}</span>
                           <span className="ml-1">shares</span>
                           <span className="mx-1">=</span>
-                          <span className="font-medium text-gray-300">${(asset.shares * asset.currentPrice).toFixed(2)}</span>
+                          <span className="font-medium text-gray-300">{formatCurrency(asset.shares * asset.currentPrice)}</span>
                         </>
                       ) : !asset.currentPrice ? (
                         <span className="text-red-400/80">Price needed for shares</span>
