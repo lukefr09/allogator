@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Asset, AllocationResult, SavedPortfolio } from './types';
+import React, { useState, useEffect } from 'react';
+import { Asset, AllocationResult, SavedPortfolio, ViewMode } from './types';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
 import AssetList from './components/AssetList';
@@ -16,6 +16,7 @@ import {
   exportPortfolio,
   importPortfolio
 } from './utils/storage';
+import { priceService } from './services/priceService';
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
@@ -34,7 +35,8 @@ const PortfolioRebalancer = () => {
   const [activePortfolioId, setActivePortfolioIdState] = useState<string | null>(null);
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastPriceUpdate, setLastPriceUpdate] = useState<string | undefined>();
+  const [viewMode, setViewMode] = useState<ViewMode>('money');
   
   const totalPercentage = calculateTotalPercentage(assets);
   
@@ -50,6 +52,13 @@ const PortfolioRebalancer = () => {
         setPortfolioName(portfolio.name);
         setActivePortfolioIdState(portfolio.id);
       }
+    }
+  }, []);
+  
+  // Fetch prices after assets are loaded
+  useEffect(() => {
+    if (assets.length > 0) {
+      handleRefreshPrices();
     }
   }, []);
   
@@ -75,10 +84,35 @@ const PortfolioRebalancer = () => {
     const updated = [...assets];
     if (field === 'symbol') {
       updated[index].symbol = value as string;
+      // Clear price and share data when symbol changes
+      updated[index].currentPrice = undefined;
+      updated[index].lastUpdated = undefined;
+      updated[index].priceSource = undefined;
+      updated[index].shares = undefined;
     } else if (field === 'currentValue') {
       updated[index].currentValue = value as number;
+      // Update shares when value changes and price is available
+      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
+        updated[index].shares = (value as number) / updated[index].currentPrice!;
+      }
+    } else if (field === 'shares') {
+      updated[index].shares = value as number;
+      // Update value when shares change and price is available
+      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
+        updated[index].currentValue = (value as number) * updated[index].currentPrice!;
+      }
     } else if (field === 'targetPercentage') {
       updated[index].targetPercentage = value as number;
+    } else if (field === 'currentPrice') {
+      updated[index].currentPrice = value as number;
+      // Update shares when price changes and value exists
+      if (updated[index].currentValue > 0 && (value as number) > 0) {
+        updated[index].shares = updated[index].currentValue / (value as number);
+      }
+    } else if (field === 'lastUpdated') {
+      updated[index].lastUpdated = value as string;
+    } else if (field === 'priceSource') {
+      updated[index].priceSource = value as 'api' | 'manual';
     }
     setAssets(updated);
   };
@@ -162,6 +196,33 @@ const PortfolioRebalancer = () => {
     }
   };
   
+  const handleRefreshPrices = async () => {
+    const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
+    if (symbols.length === 0) return;
+    
+    const priceData = await priceService.fetchMultiplePrices(symbols);
+    const updatedAssets = assets.map(asset => {
+      const data = priceData.get(asset.symbol);
+      if (data) {
+        const updatedAsset = {
+          ...asset,
+          currentPrice: data.price,
+          lastUpdated: data.timestamp,
+          priceSource: 'api' as const
+        };
+        // Calculate shares if we have current value and new price
+        if (updatedAsset.currentValue > 0 && data.price > 0) {
+          updatedAsset.shares = updatedAsset.currentValue / data.price;
+        }
+        return updatedAsset;
+      }
+      return asset;
+    });
+    
+    setAssets(updatedAssets);
+    setLastPriceUpdate(new Date().toISOString());
+  };
+  
   return (
     <>
       <Header
@@ -190,6 +251,10 @@ const PortfolioRebalancer = () => {
                 onUpdateAsset={handleUpdateAsset}
                 onRemoveAsset={handleRemoveAsset}
                 totalPercentage={totalPercentage}
+                onRefreshPrices={handleRefreshPrices}
+                lastPriceUpdate={lastPriceUpdate}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
               />
               
               <AddAsset
