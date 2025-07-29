@@ -298,7 +298,8 @@ const PortfolioRebalancer = () => {
       setAssets(updatedAssets);
       setLastPriceUpdate(new Date().toISOString());
     } catch (error) {
-      setPriceError('Unable to fetch prices. Please enter them manually.');
+      const errorMessage = error instanceof Error ? error.message : 'Unable to fetch prices. Please enter them manually.';
+      setPriceError(errorMessage);
       console.error('Price fetch error:', error);
     } finally {
       setIsLoadingPrices(false);
