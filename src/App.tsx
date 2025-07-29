@@ -6,10 +6,13 @@ import AssetList from './components/AssetList';
 import GlassCard from './components/GlassCard';
 import AnimatedNumber from './components/AnimatedNumber';
 import Skeleton from './components/Skeleton';
+import AssetTypeDialog from './components/AssetTypeDialog';
 import { validatePortfolio, calculateTotalPercentage } from './utils/validation';
 import { calculateAllocations } from './utils/calculations';
 import { priceService } from './services/priceService';
 import { encodePortfolioToUrl, decodePortfolioFromUrl, copyToClipboard } from './utils/urlSharing';
+import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from './utils/cryptoAliases';
+import { getDisplayName } from './utils/displayNames';
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
@@ -43,6 +46,12 @@ const PortfolioRebalancer = () => {
   const [priceError, setPriceError] = useState<string | undefined>();
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [showShareSuccess, setShowShareSuccess] = useState(false);
+  const [disambiguationDialog, setDisambiguationDialog] = useState<{
+    index: number;
+    symbol: string;
+    field: 'symbol' | 'add';
+    newAsset?: Omit<Asset, 'currentValue'>;
+  } | null>(null);
   
   const totalPercentage = calculateTotalPercentage(assets);
   
@@ -77,19 +86,41 @@ const PortfolioRebalancer = () => {
   const handleAddAsset = async (newAsset: Omit<Asset, 'currentValue'>) => {
     if (assets.length >= 20) return;
     
+    const symbol = newAsset.symbol.trim().toUpperCase();
+    
+    // Check if it's an ambiguous symbol
+    if (isAmbiguousSymbol(symbol)) {
+      setDisambiguationDialog({
+        index: assets.length,
+        symbol,
+        field: 'add',
+        newAsset
+      });
+      return;
+    }
+    
+    // Check if it's a crypto alias and auto-convert
+    let finalSymbol = symbol;
+    if (isCryptoAlias(symbol)) {
+      const cryptoSymbol = getCryptoSymbol(symbol, 'binance');
+      if (cryptoSymbol) {
+        finalSymbol = cryptoSymbol;
+      }
+    }
+    
     // Add the asset with initial values
-    const assetWithDefaults: Asset = { ...newAsset, currentValue: 0 };
+    const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
     setAssets([...assets, assetWithDefaults]);
     
     // Fetch price for the new asset
-    if (newAsset.symbol.trim() !== '') {
-      const priceData = await priceService.fetchPrice(newAsset.symbol);
+    if (finalSymbol !== '') {
+      const priceData = await priceService.fetchPrice(finalSymbol);
       if (priceData) {
         // Update the assets array with the fetched price
         setAssets(prevAssets => {
           const updatedAssets = [...prevAssets];
           const newAssetIndex = updatedAssets.length - 1;
-          if (updatedAssets[newAssetIndex].symbol === newAsset.symbol) {
+          if (updatedAssets[newAssetIndex].symbol === finalSymbol) {
             updatedAssets[newAssetIndex] = {
               ...updatedAssets[newAssetIndex],
               currentPrice: priceData.price,
@@ -110,10 +141,31 @@ const PortfolioRebalancer = () => {
     const updated = [...assets];
     if (field === 'symbol') {
       const oldSymbol = updated[index].symbol;
-      updated[index].symbol = value as string;
+      const newSymbol = (value as string).trim().toUpperCase();
+      
+      // Check if it's an ambiguous symbol
+      if (isAmbiguousSymbol(newSymbol)) {
+        setDisambiguationDialog({
+          index,
+          symbol: newSymbol,
+          field: 'symbol'
+        });
+        return;
+      }
+      
+      // Check if it's a crypto alias and auto-convert
+      let finalSymbol = newSymbol;
+      if (isCryptoAlias(newSymbol)) {
+        const cryptoSymbol = getCryptoSymbol(newSymbol, 'binance');
+        if (cryptoSymbol) {
+          finalSymbol = cryptoSymbol;
+        }
+      }
+      
+      updated[index].symbol = finalSymbol;
       
       // If symbol changed and is not empty, fetch price
-      if (oldSymbol !== value && (value as string).trim() !== '') {
+      if (oldSymbol !== finalSymbol && finalSymbol.trim() !== '') {
         setIsLoadingPrices(true);
         setPriceError(undefined);
         
@@ -252,6 +304,96 @@ const PortfolioRebalancer = () => {
     }
   };
   
+  const handleDisambiguationChoice = async (choice: 'stock' | 'crypto', exchange?: 'binance' | 'coinbase') => {
+    if (!disambiguationDialog) return;
+    
+    const { index, symbol, field, newAsset } = disambiguationDialog;
+    
+    if (field === 'add' && newAsset) {
+      // Handle adding new asset
+      let finalSymbol = symbol;
+      if (choice === 'crypto' && exchange) {
+        const cryptoSymbol = getCryptoSymbol(symbol, exchange);
+        if (cryptoSymbol) {
+          finalSymbol = cryptoSymbol;
+        }
+      }
+      
+      const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
+      setAssets([...assets, assetWithDefaults]);
+      
+      // Fetch price for the new asset
+      if (finalSymbol !== '') {
+        const priceData = await priceService.fetchPrice(finalSymbol);
+        if (priceData) {
+          setAssets(prevAssets => {
+            const updatedAssets = [...prevAssets];
+            const newAssetIndex = updatedAssets.length - 1;
+            if (updatedAssets[newAssetIndex].symbol === finalSymbol) {
+              updatedAssets[newAssetIndex] = {
+                ...updatedAssets[newAssetIndex],
+                currentPrice: priceData.price,
+                lastUpdated: priceData.timestamp,
+                priceSource: 'api'
+              };
+            }
+            return updatedAssets;
+          });
+          setLastPriceUpdate(new Date().toISOString());
+        }
+      }
+    } else if (field === 'symbol') {
+      // Handle updating existing asset
+      let finalSymbol = symbol;
+      if (choice === 'crypto' && exchange) {
+        const cryptoSymbol = getCryptoSymbol(symbol, exchange);
+        if (cryptoSymbol) {
+          finalSymbol = cryptoSymbol;
+        }
+      }
+      
+      const updated = [...assets];
+      updated[index].symbol = finalSymbol;
+      
+      // If symbol changed and is not empty, fetch price
+      if (finalSymbol !== '') {
+        setIsLoadingPrices(true);
+        setPriceError(undefined);
+        
+        try {
+          const priceData = await priceService.fetchPrice(finalSymbol);
+          if (priceData) {
+            updated[index].currentPrice = priceData.price;
+            updated[index].lastUpdated = priceData.timestamp;
+            updated[index].priceSource = 'api';
+            
+            // Update shares if we have a current value
+            if (updated[index].currentValue > 0 && priceData.price > 0) {
+              updated[index].shares = Math.round((updated[index].currentValue / priceData.price) * 1000000) / 1000000;
+            }
+            
+            setLastPriceUpdate(new Date().toISOString());
+          } else {
+            // Clear price data if fetch failed
+            updated[index].currentPrice = undefined;
+            updated[index].lastUpdated = undefined;
+            updated[index].priceSource = undefined;
+            updated[index].shares = undefined;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch price for ${finalSymbol}:`, error);
+          setPriceError(`Unable to fetch price for ${finalSymbol}. Enter price manually.`);
+        } finally {
+          setIsLoadingPrices(false);
+        }
+      }
+      
+      setAssets(updated);
+    }
+    
+    setDisambiguationDialog(null);
+  };
+  
   return (
     <>
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
@@ -342,7 +484,7 @@ const PortfolioRebalancer = () => {
                             className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
                             style={{ animationDelay: `${index * 50}ms` }}
                           >
-                            <span className="font-medium text-gray-200">{allocation.symbol}</span>
+                            <span className="font-medium text-gray-200">{getDisplayName(allocation.symbol)}</span>
                             <AnimatedNumber
                               value={allocation.amountToAdd}
                               prefix="$"
@@ -457,7 +599,7 @@ const PortfolioRebalancer = () => {
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 ${statusColor} rounded-full`}></span>
-                                <span className="font-medium">{allocation.symbol}</span>
+                                <span className="font-medium">{getDisplayName(allocation.symbol)}</span>
                               </div>
                               <div className="text-right">
                                 <AnimatedNumber
@@ -514,6 +656,15 @@ const PortfolioRebalancer = () => {
           </div>
         </div>
       </div>
+      
+      {disambiguationDialog && (
+        <AssetTypeDialog
+          symbol={disambiguationDialog.symbol}
+          onSelectStock={() => handleDisambiguationChoice('stock')}
+          onSelectCrypto={(exchange) => handleDisambiguationChoice('crypto', exchange)}
+          onCancel={() => setDisambiguationDialog(null)}
+        />
+      )}
     </>
   );
 };

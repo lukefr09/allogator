@@ -4,6 +4,7 @@ import GlassCard from './GlassCard';
 import ViewModeToggle from './ViewModeToggle';
 import Skeleton from './Skeleton';
 import { formatCurrency, formatShares } from '../utils/formatters';
+import { getDisplayName } from '../utils/displayNames';
 
 interface AssetListProps {
   assets: Asset[];
@@ -130,11 +131,12 @@ const AssetList: React.FC<AssetListProps> = ({
                   </label>
                 <input
                   type="text"
-                  defaultValue={asset.symbol}
+                  defaultValue={getDisplayName(asset.symbol)}
                   key={`symbol-${index}-${asset.symbol}`} // Force re-render when symbol changes externally
                   onBlur={(e) => {
                     const newSymbol = e.target.value.toUpperCase();
-                    if (newSymbol !== asset.symbol) {
+                    const currentDisplayName = getDisplayName(asset.symbol).toUpperCase();
+                    if (newSymbol !== currentDisplayName) {
                       onUpdateAsset(index, 'symbol', newSymbol);
                     }
                   }}
@@ -152,7 +154,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   ) : asset.currentPrice ? (
                     <>
                       <div>
-                        <span className="font-medium text-gray-400">{asset.symbol}</span>
+                        <span className="font-medium text-gray-400">{getDisplayName(asset.symbol)}</span>
                         <span className="mx-1">@</span>
                         <span className="font-medium text-gray-300">{formatCurrency(asset.currentPrice)}</span>
                         {asset.priceSource === 'manual' && (
