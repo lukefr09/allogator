@@ -1,7 +1,7 @@
 # Allogator 🐊
 
 <p align="center">
-  <a href="https://allogator.vercel.app">Live Demo</a> •
+  <a href="https://allogator.xyz">Live Demo</a> •
   <a href="#features">Features</a> •
   <a href="#getting-started">Get Started</a> •
   <a href="https://github.com/lukefr09">Built by Luke</a>
