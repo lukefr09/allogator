@@ -13,6 +13,7 @@ import { priceService } from './services/priceService';
 import { encodePortfolioToUrl, decodePortfolioFromUrl, copyToClipboard } from './utils/urlSharing';
 import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from './utils/cryptoAliases';
 import { getDisplayName } from './utils/displayNames';
+import { Analytics } from "@vercel/analytics/next";
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
