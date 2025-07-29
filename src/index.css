@@ -7,11 +7,11 @@
 
 @layer base {
   html, body {
-    @apply overflow-hidden h-full;
+    @apply h-full;
   }
   
   body {
-    @apply bg-navy-900 text-gray-100 text-base;
+    @apply bg-navy-900 text-gray-100 text-base overflow-x-hidden;
     font-feature-settings: 'tnum' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

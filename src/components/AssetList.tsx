@@ -103,11 +103,11 @@ const AssetList: React.FC<AssetListProps> = ({
       )}
       
       {/* Asset List */}
-      <div className="space-y-4 animate-stagger">
+      <div className="space-y-4 animate-stagger overflow-visible">
         {assets.map((asset, index) => (
           <div
             key={index}
-            className={`group glass-light p-5 rounded-xl transition-all duration-300 border-b border-white/5 last:border-b-0 ${
+            className={`group glass-light p-5 rounded-xl transition-all duration-300 border-b border-white/5 last:border-b-0 overflow-visible ${
               hoveredIndex === index ? 'scale-[1.01] shadow-lg' : ''
             }`}
             onMouseEnter={() => setHoveredIndex(index)}
@@ -137,7 +137,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   className="glass-input w-full font-semibold text-lg tabular-nums"
                   placeholder="AAPL"
                 />
-                <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between">
+                <div className="mt-2 h-5 text-xs text-gray-500 flex items-center justify-between relative z-50">
                   {asset.currentPrice && (
                     <>
                       <div>
@@ -222,7 +222,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         min="0"
                       />
                     </div>
-                    <div className="mt-2 h-5 text-xs text-gray-500">
+                    <div className="mt-2 h-5 text-xs text-gray-500 overflow-visible whitespace-nowrap relative z-50">
                       {asset.currentPrice && asset.currentValue > 0 && (
                         <>
                           <span className="font-medium text-gray-400">
@@ -276,7 +276,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         disabled={!asset.currentPrice}
                       />
                     </div>
-                    <div className="mt-2 h-5 text-xs text-gray-500">
+                    <div className="mt-2 h-5 text-xs text-gray-500 overflow-visible whitespace-nowrap relative z-50">
                       {asset.currentPrice && asset.shares && asset.shares > 0 ? (
                         <>
                           <span className="font-medium text-gray-400">{asset.shares.toFixed(3)}</span>
@@ -331,22 +331,22 @@ const AssetList: React.FC<AssetListProps> = ({
                 </div>
                 
                 {/* Remove Button */}
-                <div className="flex items-end sm:items-center sm:pt-0">
-                <button
-                  onClick={() => onRemoveAsset(index)}
-                  className={`
-                    p-2.5 rounded-lg transition-all duration-200 min-w-[44px] min-h-[44px]
-                    ${assets.length <= 2 
-                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
-                      : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-110 active:scale-95'
-                    }
-                  `}
-                  disabled={assets.length <= 2}
-                  title={assets.length <= 2 ? "Minimum 2 assets required" : "Remove asset"}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <div className="flex items-center justify-center sm:self-center sm:ml-6 sm:-mt-2">
+                  <button
+                    onClick={() => onRemoveAsset(index)}
+                    className={`
+                      p-4 rounded-lg transition-all duration-200 mt-6 sm:mt-0
+                      ${assets.length <= 2 
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
+                        : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-110 active:scale-95'
+                      }
+                    `}
+                    disabled={assets.length <= 2}
+                    title={assets.length <= 2 ? "Minimum 2 assets required" : "Remove asset"}
+                  >
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>

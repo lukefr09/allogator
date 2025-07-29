@@ -255,13 +255,13 @@ const PortfolioRebalancer = () => {
     <>
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="h-screen pt-24 sm:pt-32 overflow-hidden">
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6">
+      <div className="min-h-screen pt-24 sm:pt-32 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           
           {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8 h-[calc(100%-2rem)]">
+          <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
             {/* Left Column - Portfolio Management (Scrollable) */}
-            <div className="lg:col-span-2 space-y-6 relative z-10 lg:overflow-y-auto lg:overflow-x-hidden lg:pr-4 lg:pb-8 scrollbar-hide">
+            <div className="lg:col-span-2 space-y-6 relative z-10 lg:pr-4 lg:pb-8">
               {/* Asset List */}
               <AssetList
                 assets={assets}
@@ -282,8 +282,8 @@ const PortfolioRebalancer = () => {
               />
             </div>
             
-            {/* Right Column - Calculations (Scrollable) */}
-            <div className="space-y-6 relative z-0 lg:sticky lg:top-32 lg:h-[calc(100vh-10rem)] lg:overflow-y-auto lg:overflow-x-hidden scrollbar-hide">
+            {/* Right Column - Calculations */}
+            <div className="space-y-6 relative z-0">
               {/* Validation Errors */}
               {validationErrors.length > 0 && (
                 <GlassCard variant="default" padding="md" className="border-red-500/20">
