@@ -83,7 +83,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
         <div className="w-32 relative">
           <input
             type="number"
-            placeholder="Target %"
+            placeholder="Target"
             value={targetPercentage}
             onChange={(e) => setTargetPercentage(e.target.value)}
             className="glass-input w-full pr-8 font-medium tabular-nums"

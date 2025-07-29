@@ -297,9 +297,14 @@ const AssetList: React.FC<AssetListProps> = ({
               <div className="flex gap-3 sm:contents">
                 {/* Target Percentage Input */}
                 <div className="flex-1 sm:flex-initial sm:w-32">
-                <label className="block text-xs font-medium text-gray-400 mb-1.5" title="The percentage of your total portfolio you want this asset to represent">
+                <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
                   Target %
-                  <span className="ml-1 text-gray-500" title="The percentage of your total portfolio you want this asset to represent">ⓘ</span>
+                  <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                    ⓘ
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                      The percentage of your total portfolio<br/>you want this asset to represent
+                    </span>
+                  </span>
                 </label>
                 <div className="relative">
                   <input
