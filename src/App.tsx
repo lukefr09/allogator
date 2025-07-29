@@ -206,15 +206,15 @@ const PortfolioRebalancer = () => {
       }
     } else if (field === 'currentValue') {
       updated[index].currentValue = value as number;
-      // Only update shares from value if we don't already have shares (i.e., in money mode)
-      if (updated[index].currentPrice && updated[index].currentPrice > 0 && !updated[index].shares) {
+      // Always update shares when value changes and price is available
+      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
         updated[index].shares = Math.round(((value as number) / updated[index].currentPrice!) * 1000000) / 1000000;
       }
     } else if (field === 'shares') {
       updated[index].shares = value as number;
       // Always update value when shares change and price is available
       if (updated[index].currentPrice && updated[index].currentPrice > 0) {
-        updated[index].currentValue = (value as number) * updated[index].currentPrice!;
+        updated[index].currentValue = Math.round(((value as number) * updated[index].currentPrice!) * 100) / 100;
       }
     } else if (field === 'targetPercentage') {
       updated[index].targetPercentage = value as number;
@@ -224,7 +224,7 @@ const PortfolioRebalancer = () => {
       if ((value as number) > 0) {
         if (updated[index].shares && updated[index].shares > 0) {
           // Update value based on existing shares
-          updated[index].currentValue = updated[index].shares! * (value as number);
+          updated[index].currentValue = Math.round((updated[index].shares! * (value as number)) * 100) / 100;
         } else if (updated[index].currentValue > 0) {
           // Calculate shares from existing value
           updated[index].shares = Math.round((updated[index].currentValue / (value as number)) * 1000000) / 1000000;
@@ -279,7 +279,7 @@ const PortfolioRebalancer = () => {
         // Prioritize shares over value when updating prices
         if (updatedAsset.shares && updatedAsset.shares > 0 && data.price > 0) {
           // Update value based on existing shares (this preserves exact share count)
-          updatedAsset.currentValue = updatedAsset.shares * data.price;
+          updatedAsset.currentValue = Math.round((updatedAsset.shares * data.price) * 100) / 100;
         } else if (updatedAsset.currentValue > 0 && data.price > 0) {
           // Calculate shares from existing value (only if no shares exist)
           updatedAsset.shares = Math.round((updatedAsset.currentValue / data.price) * 1000000) / 1000000;
