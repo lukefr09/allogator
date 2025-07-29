@@ -627,7 +627,7 @@ const PortfolioRebalancer = () => {
                                     ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
                                     <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
                                       This is the difference between the new<br/>
-                                      allocation ({allocation.newPercentage.toFixed(1)}%) and target ({(asset?.targetPercentage * 100).toFixed(1)}%)<br/>
+                                      allocation ({allocation.newPercentage.toFixed(1)}%) and target ({((asset?.targetPercentage || 0) * 100).toFixed(1)}%)<br/>
                                       {absDiff < 0.5 ? 'Perfectly balanced ✓' : absDiff < 2 ? 'Close to target' : 'Consider rebalancing'}
                                     </span>
                                   </span>

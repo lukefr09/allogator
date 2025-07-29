@@ -3,7 +3,7 @@ import { Asset, ViewMode } from '../types';
 import GlassCard from './GlassCard';
 import ViewModeToggle from './ViewModeToggle';
 import Skeleton from './Skeleton';
-import { formatCurrency, formatShares } from '../utils/formatters';
+import { formatCurrency } from '../utils/formatters';
 import { getDisplayName } from '../utils/displayNames';
 
 interface AssetListProps {
