@@ -55,7 +55,11 @@ class PriceService {
         const response = await fetch(url);
         
         if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
+          throw new Error('Price API temporarily at capacity. Please enter prices manually or try again in a few minutes.');
+        }
+        
+        if (response.status >= 500) {
+          throw new Error('Price API temporarily unavailable. Please enter prices manually or try again in a few minutes.');
         }
         
         if (!response.ok) {
