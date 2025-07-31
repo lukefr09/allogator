@@ -5,26 +5,43 @@ export interface PriceData {
 }
 
 export interface PriceServiceConfig {
-  apiKey: string;
+  apiKey?: string;
+  apiKeys?: string[];
   baseUrl?: string;
 }
 
 class PriceService {
   private cache: Map<string, { price: number; timestamp: string }> = new Map();
   private cacheTimeout = 300000; // 5 minute cache (shorter since we have better rate limits)
-  private apiKey: string;
+  private apiKeys: string[];
+  private currentKeyIndex = 0;
   private baseUrl: string;
   private requestQueue: Promise<any> = Promise.resolve();
   private lastRequestTime = 0;
   private minRequestInterval = 1100; // 1.1 seconds between requests to avoid rate limits
   
   constructor(config: PriceServiceConfig) {
-    this.apiKey = config.apiKey;
+    if (config.apiKeys && config.apiKeys.length > 0) {
+      this.apiKeys = config.apiKeys.filter(key => key && key.trim() !== '');
+    } else if (config.apiKey && config.apiKey.trim() !== '') {
+      this.apiKeys = [config.apiKey];
+    } else {
+      this.apiKeys = [];
+    }
+    
     this.baseUrl = config.baseUrl || 'https://finnhub.io/api/v1';
     
-    if (!this.apiKey || this.apiKey.trim() === '') {
-      throw new Error('A valid API key is required');
+    if (this.apiKeys.length === 0) {
+      throw new Error('At least one valid API key is required');
     }
+  }
+  
+  private getCurrentApiKey(): string {
+    return this.apiKeys[this.currentKeyIndex];
+  }
+  
+  private rotateApiKey(): void {
+    this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
   }
   
   
@@ -48,13 +65,18 @@ class PriceService {
         await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
       }
 
-      const url = `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.apiKey}`;
+      const url = `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.getCurrentApiKey()}`;
       
       try {
         this.lastRequestTime = Date.now();
         const response = await fetch(url);
         
         if (response.status === 429) {
+          if (this.apiKeys.length > 1) {
+            console.log(`API key ${this.currentKeyIndex + 1} rate limited, rotating to next key...`);
+            this.rotateApiKey();
+            return this.fetchPrice(symbol);
+          }
           throw new Error('Price API temporarily at capacity. Please enter prices manually or try again in a few minutes.');
         }
         
@@ -108,6 +130,19 @@ class PriceService {
   }
 }
 
+const apiKeys: string[] = [];
+
+// Support multiple API keys via comma-separated values
+if (import.meta.env.VITE_FINNHUB_API_KEYS) {
+  apiKeys.push(...import.meta.env.VITE_FINNHUB_API_KEYS.split(',').map((key: string) => key.trim()));
+}
+
+// Also support single API key for backward compatibility
+if (import.meta.env.VITE_FINNHUB_API_KEY) {
+  apiKeys.push(import.meta.env.VITE_FINNHUB_API_KEY);
+}
+
 export const priceService = new PriceService({
-  apiKey: import.meta.env.VITE_FINNHUB_API_KEY || ''
+  apiKeys: apiKeys.length > 0 ? apiKeys : undefined,
+  apiKey: apiKeys.length === 0 ? '' : undefined
 });
