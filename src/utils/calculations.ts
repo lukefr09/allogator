@@ -2,11 +2,31 @@ import { Asset, AllocationResult } from '../types';
 
 export const calculateAllocations = (
   assets: Asset[], 
-  newMoney: number
+  newMoney: number,
+  enableSelling: boolean = false
 ): AllocationResult[] => {
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
   
+  // If perfect rebalancing is enabled, calculate exact target values
+  if (enableSelling) {
+    return assets.map(asset => {
+      const targetValue = newTotal * asset.targetPercentage;
+      const currentValue = asset.currentValue;
+      const difference = targetValue - currentValue;
+      
+      return {
+        symbol: asset.symbol,
+        amountToAdd: parseFloat(difference.toFixed(2)), // Can be negative for selling
+        newValue: parseFloat(targetValue.toFixed(2)),
+        newPercentage: asset.targetPercentage * 100,
+        targetPercentage: asset.targetPercentage * 100,
+        difference: 0 // Perfect rebalancing means no difference
+      };
+    });
+  }
+  
+  // Original logic for buy-only allocation
   // Calculate initial deviations and sort by most underweight
   const assetsWithDeviation = assets.map((asset, index) => {
     const currentPercentage = currentTotal > 0 ? (asset.currentValue / currentTotal) * 100 : 0;

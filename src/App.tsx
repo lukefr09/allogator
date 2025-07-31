@@ -49,6 +49,7 @@ const PortfolioRebalancer = () => {
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showSharesInAllocation, setShowSharesInAllocation] = useState(false);
+  const [enableSelling, setEnableSelling] = useState(false);
   const [disambiguationDialog, setDisambiguationDialog] = useState<{
     index: number;
     symbol: string;
@@ -79,12 +80,12 @@ const PortfolioRebalancer = () => {
     setValidationErrors(validation.errors);
     
     if (validation.isValid && newMoney > 0) {
-      const results = calculateAllocations(assets, newMoney);
+      const results = calculateAllocations(assets, newMoney, enableSelling);
       setAllocations(results);
     } else {
       setAllocations([]);
     }
-  }, [assets, newMoney]);
+  }, [assets, newMoney, enableSelling]);
   
   const handleAddAsset = async (newAsset: Omit<Asset, 'currentValue'>) => {
     if (assets.length >= 20) return;
@@ -491,7 +492,12 @@ const PortfolioRebalancer = () => {
         }}
       />
       
-      <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
+      <Header 
+        newMoney={newMoney} 
+        onNewMoneyChange={setNewMoney} 
+        enableSelling={enableSelling}
+        onEnableSellingChange={setEnableSelling}
+      />
       
       <div className="min-h-screen pt-32 sm:pt-32 pb-8 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -552,8 +558,10 @@ const PortfolioRebalancer = () => {
                           <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
-                            Recommended amounts to invest in each asset<br/>to maintain your target allocation
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                            {enableSelling 
+                              ? 'Buy and sell amounts to achieve perfect target allocation' 
+                              : 'Recommended amounts to invest in each asset to maintain your target allocation'}
                           </span>
                         </span>
                       </h2>
@@ -564,7 +572,7 @@ const PortfolioRebalancer = () => {
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
-                        <span className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                        <span className="absolute top-full right-0 mt-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
                           {showSharesInAllocation ? 'Hide' : 'Show'} share quantities
                         </span>
                       </button>
@@ -588,9 +596,10 @@ const PortfolioRebalancer = () => {
                       ) : (
                         allocations.map((allocation, index) => {
                           const asset = assets.find(a => a.symbol === allocation.symbol);
-                          const sharesToBuy = asset?.currentPrice && asset.currentPrice > 0 
-                            ? allocation.amountToAdd / asset.currentPrice 
+                          const shares = asset?.currentPrice && asset.currentPrice > 0 
+                            ? Math.abs(allocation.amountToAdd) / asset.currentPrice 
                             : null;
+                          const isSelling = allocation.amountToAdd < 0;
                           
                           return (
                             <div
@@ -600,14 +609,17 @@ const PortfolioRebalancer = () => {
                             >
                               <span className="font-medium text-gray-200 text-sm sm:text-base">{getDisplayName(allocation.symbol)}</span>
                               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0 sm:gap-2">
+                                {isSelling && (
+                                  <span className="text-red-400 text-xs sm:text-sm mr-1">Sell</span>
+                                )}
                                 <AnimatedNumber
-                                  value={allocation.amountToAdd}
+                                  value={Math.abs(allocation.amountToAdd)}
                                   prefix="$"
-                                  className="text-emerald-400 font-semibold text-sm sm:text-base"
+                                  className={`font-semibold text-sm sm:text-base ${isSelling ? 'text-red-400' : 'text-emerald-400'}`}
                                 />
-                                {showSharesInAllocation && sharesToBuy !== null && (
+                                {showSharesInAllocation && shares !== null && (
                                   <span className="text-gray-500 text-xs sm:text-sm">
-                                    ({sharesToBuy < 1 ? sharesToBuy.toFixed(4) : sharesToBuy.toFixed(2)} shares)
+                                    ({shares < 1 ? shares.toFixed(4) : shares.toFixed(2)} shares)
                                   </span>
                                 )}
                               </div>
@@ -615,13 +627,23 @@ const PortfolioRebalancer = () => {
                           );
                         })
                       )}
-                      <div className="flex justify-between items-center pt-4 mt-4 border-t border-white/10">
-                        <span className="font-bold text-gray-100">Total</span>
-                        <AnimatedNumber
-                          value={allocations.reduce((sum, a) => sum + a.amountToAdd, 0)}
-                          prefix="$"
-                          className="text-emerald-400 font-bold text-lg"
-                        />
+                      <div className="flex justify-between items-start pt-4 mt-4 border-t border-white/10">
+                        <span className="font-bold text-gray-100 mt-1">
+                          {enableSelling ? 'Net Investment' : 'Total'}
+                        </span>
+                        <div className="flex flex-col items-end">
+                          <AnimatedNumber
+                            value={allocations.reduce((sum, a) => sum + a.amountToAdd, 0)}
+                            prefix="$"
+                            className="text-emerald-400 font-bold text-lg"
+                          />
+                          {enableSelling && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Buy: ${allocations.filter(a => a.amountToAdd > 0).reduce((sum, a) => sum + a.amountToAdd, 0).toFixed(2)} | 
+                              Sell: ${Math.abs(allocations.filter(a => a.amountToAdd < 0).reduce((sum, a) => sum + a.amountToAdd, 0)).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </GlassCard>
@@ -634,7 +656,7 @@ const PortfolioRebalancer = () => {
                           <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
                             Your portfolio values and allocations<br/>after investing the new money
                           </span>
                         </span>
@@ -656,32 +678,39 @@ const PortfolioRebalancer = () => {
                         )}
                       </button>
                     </div>
-                    <div className="text-xs text-gray-400 mb-4 flex flex-wrap items-center gap-2 sm:gap-4">
-                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
+                    {enableSelling ? (
+                      <div className="text-xs text-gray-400 mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></span>
-                        <span className="hidden sm:inline">On target</span>
-                        <span className="sm:hidden">On</span>
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                          Less than 0.5% difference<br/>from target allocation
+                        <span>All assets perfectly balanced at target allocation</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 mb-4 flex flex-wrap items-center gap-2 sm:gap-4">
+                        <span className="flex items-center gap-1 cursor-help group/tooltip relative">
+                          <span className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></span>
+                          <span className="hidden sm:inline">On target</span>
+                          <span className="sm:hidden">On</span>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                            Less than 0.5% difference<br/>from target allocation
+                          </span>
                         </span>
-                      </span>
-                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0"></span>
-                        <span className="hidden sm:inline">Slightly off</span>
-                        <span className="sm:hidden">Off</span>
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                          0.5% to 2% difference<br/>from target allocation
+                        <span className="flex items-center gap-1 cursor-help group/tooltip relative">
+                          <span className="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0"></span>
+                          <span className="hidden sm:inline">Slightly off</span>
+                          <span className="sm:hidden">Off</span>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                            0.5% to 2% difference<br/>from target allocation
+                          </span>
                         </span>
-                      </span>
-                      <span className="flex items-center gap-1 cursor-help group/tooltip relative">
-                        <span className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></span>
-                        <span className="hidden sm:inline">Needs rebalancing</span>
-                        <span className="sm:hidden">Rebalance</span>
-                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                          More than 2% difference<br/>from target allocation
+                        <span className="flex items-center gap-1 cursor-help group/tooltip relative">
+                          <span className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></span>
+                          <span className="hidden sm:inline">Needs rebalancing</span>
+                          <span className="sm:hidden">Rebalance</span>
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                            More than 2% difference<br/>from target allocation
+                          </span>
                         </span>
-                      </span>
-                    </div>
+                      </div>
+                    )}
                     <div className="space-y-3">
                       {isLoadingPrices && allocations.length === 0 ? (
                         <>
@@ -710,12 +739,15 @@ const PortfolioRebalancer = () => {
                         let statusColor = 'bg-emerald-400';
                         let textColor = 'text-emerald-400';
                         
-                        if (absDiff >= 2) {
-                          statusColor = 'bg-red-400';
-                          textColor = 'text-red-400';
-                        } else if (absDiff >= 0.5) {
-                          statusColor = 'bg-yellow-400';
-                          textColor = 'text-yellow-400';
+                        // Only show yellow/red status when not in perfect rebalancing mode
+                        if (!enableSelling) {
+                          if (absDiff >= 2) {
+                            statusColor = 'bg-red-400';
+                            textColor = 'text-red-400';
+                          } else if (absDiff >= 0.5) {
+                            statusColor = 'bg-yellow-400';
+                            textColor = 'text-yellow-400';
+                          }
                         }
                         
                         return (
@@ -736,18 +768,37 @@ const PortfolioRebalancer = () => {
                                   className="font-semibold text-sm sm:text-base"
                                 />
                                 <div className="text-xs text-gray-400 mt-1 flex flex-wrap items-center justify-end gap-1 sm:gap-2">
-                                  <span className="px-1 py-0.5 bg-gray-700/50 rounded text-gray-400 text-[10px] sm:text-xs">
+                                  <span className="px-1 py-0.5 bg-gray-700/50 rounded text-gray-400 text-[10px] sm:text-xs cursor-help group/percent relative">
                                     {currentPercentage.toFixed(1)}%
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/percent:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                                      Current allocation
+                                    </span>
                                   </span>
                                   <svg className="w-2 h-2 sm:w-3 sm:h-3 text-gray-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                   </svg>
-                                  <span className="px-1 py-0.5 bg-gray-800/50 rounded text-gray-300 text-[10px] sm:text-xs">
+                                  <span className="px-1 py-0.5 bg-gray-800/50 rounded text-gray-300 text-[10px] sm:text-xs cursor-help group/newpercent relative">
                                     {allocation.newPercentage.toFixed(1)}%
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/newpercent:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                                      New allocation after investment
+                                    </span>
                                   </span>
-                                  <span className={`font-medium ${textColor} text-[10px] sm:text-xs`}>
-                                    ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
-                                  </span>
+                                  {!enableSelling && (
+                                    <span className={`font-medium ${textColor} text-[10px] sm:text-xs cursor-help group/diff relative`}>
+                                      ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
+                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/diff:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                                        Difference from target ({allocation.targetPercentage.toFixed(1)}%)
+                                      </span>
+                                    </span>
+                                  )}
+                                  {enableSelling && (
+                                    <span className="font-medium text-emerald-400 text-[10px] sm:text-xs cursor-help group/perfect relative">
+                                      (Perfect)
+                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/perfect:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                                        Exactly at target allocation
+                                      </span>
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
