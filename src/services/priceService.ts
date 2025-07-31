@@ -8,6 +8,7 @@ export interface PriceServiceConfig {
   apiKey?: string;
   apiKeys?: string[];
   baseUrl?: string;
+  useServerless?: boolean;
 }
 
 class PriceService {
@@ -16,24 +17,32 @@ class PriceService {
   private apiKeys: string[];
   private currentKeyIndex = 0;
   private baseUrl: string;
+  private useServerless: boolean;
   private requestQueue: Promise<any> = Promise.resolve();
   private lastRequestTime = 0;
   private minRequestInterval = 1100; // 1.1 seconds between requests to avoid rate limits
   
   constructor(config: PriceServiceConfig) {
-    if (config.apiKeys && config.apiKeys.length > 0) {
-      this.apiKeys = config.apiKeys.filter(key => key && key.trim() !== '');
-    } else if (config.apiKey && config.apiKey.trim() !== '') {
-      this.apiKeys = [config.apiKey];
+    this.useServerless = config.useServerless ?? true; // Default to serverless
+    
+    if (!this.useServerless) {
+      // Only require API keys if not using serverless
+      if (config.apiKeys && config.apiKeys.length > 0) {
+        this.apiKeys = config.apiKeys.filter(key => key && key.trim() !== '');
+      } else if (config.apiKey && config.apiKey.trim() !== '') {
+        this.apiKeys = [config.apiKey];
+      } else {
+        this.apiKeys = [];
+      }
+      
+      if (this.apiKeys.length === 0) {
+        throw new Error('At least one valid API key is required when not using serverless');
+      }
     } else {
-      this.apiKeys = [];
+      this.apiKeys = []; // No API keys needed for serverless
     }
     
     this.baseUrl = config.baseUrl || 'https://finnhub.io/api/v1';
-    
-    if (this.apiKeys.length === 0) {
-      throw new Error('At least one valid API key is required');
-    }
   }
   
   private getCurrentApiKey(): string {
@@ -65,14 +74,16 @@ class PriceService {
         await new Promise(resolve => setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest));
       }
 
-      const url = `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.getCurrentApiKey()}`;
+      const url = this.useServerless 
+        ? `/api/quote?symbol=${encodeURIComponent(symbol)}`
+        : `${this.baseUrl}/quote?symbol=${encodeURIComponent(symbol)}&token=${this.getCurrentApiKey()}`;
       
       try {
         this.lastRequestTime = Date.now();
         const response = await fetch(url);
         
         if (response.status === 429) {
-          if (this.apiKeys.length > 1) {
+          if (!this.useServerless && this.apiKeys.length > 1) {
             console.log(`API key ${this.currentKeyIndex + 1} rate limited, rotating to next key...`);
             this.rotateApiKey();
             return this.fetchPrice(symbol);
@@ -130,19 +141,11 @@ class PriceService {
   }
 }
 
-const apiKeys: string[] = [];
-
-// Support multiple API keys via comma-separated values
-if (import.meta.env.VITE_FINNHUB_API_KEYS) {
-  apiKeys.push(...import.meta.env.VITE_FINNHUB_API_KEYS.split(',').map((key: string) => key.trim()));
-}
-
-// Also support single API key for backward compatibility
-if (import.meta.env.VITE_FINNHUB_API_KEY) {
-  apiKeys.push(import.meta.env.VITE_FINNHUB_API_KEY);
-}
+// Use serverless by default in production
+const useServerless = import.meta.env.PROD || !import.meta.env.VITE_FINNHUB_API_KEY;
 
 export const priceService = new PriceService({
-  apiKeys: apiKeys.length > 0 ? apiKeys : undefined,
-  apiKey: apiKeys.length === 0 ? '' : undefined
+  useServerless,
+  // Only use API keys in development if explicitly provided
+  apiKey: !useServerless ? import.meta.env.VITE_FINNHUB_API_KEY : undefined
 });
