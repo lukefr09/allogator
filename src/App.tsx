@@ -14,6 +14,7 @@ import { encodePortfolioToUrl, decodePortfolioFromUrl, copyToClipboard } from '.
 import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from './utils/cryptoAliases';
 import { getDisplayName } from './utils/displayNames';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 const PortfolioRebalancer = () => {
   const defaultAssets: Asset[] = [
@@ -782,6 +783,7 @@ const PortfolioRebalancer = () => {
         />
       )}
       <Analytics />
+      <SpeedInsights />
     </>
   );
 };
