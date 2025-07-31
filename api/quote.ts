@@ -41,8 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { symbol } = req.query;
 
-  // Enhanced symbol validation
-  const VALID_SYMBOL_REGEX = /^[A-Z0-9\-\.]{1,12}$/;
+  // Enhanced symbol validation - allow colons for exchange:symbol format
+  const VALID_SYMBOL_REGEX = /^[A-Z0-9\-\.:]{1,30}$/;
   const BLOCKED_PATTERNS = ['SCRIPT', 'EVAL', 'FUNCTION', 'JAVASCRIPT', 'VBSCRIPT'];
 
   if (!symbol || typeof symbol !== 'string') {
@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sanitizedSymbol = symbol.trim().toUpperCase();
 
   if (!VALID_SYMBOL_REGEX.test(sanitizedSymbol)) {
-    return res.status(400).json({ error: 'Invalid symbol format. Use only letters, numbers, hyphens, and dots (max 12 characters)' });
+    return res.status(400).json({ error: 'Invalid symbol format' });
   }
 
   if (BLOCKED_PATTERNS.some(pattern => sanitizedSymbol.includes(pattern))) {

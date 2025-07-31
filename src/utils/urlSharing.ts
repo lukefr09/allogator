@@ -26,14 +26,14 @@ const isValidAsset = (asset: any): asset is EncodedAsset => {
   }
   
   // Validate ranges
-  if (asset.s.length > 12 || asset.s.length === 0) return false;
+  if (asset.s.length > 30 || asset.s.length === 0) return false;
   if (asset.v < 0 || asset.v > 1000000000) return false; // Max $1B
   if (asset.t < 0 || asset.t > 1) return false;
   if (asset.p !== undefined && (typeof asset.p !== 'number' || asset.p < 0)) return false;
   if (asset.sh !== undefined && (typeof asset.sh !== 'number' || asset.sh < 0)) return false;
   
-  // Validate symbol format
-  if (!/^[A-Z0-9\-\.]{1,12}$/.test(asset.s)) return false;
+  // Validate symbol format - allow colons for exchange:symbol format
+  if (!/^[A-Z0-9\-\.:]{1,30}$/.test(asset.s)) return false;
   
   return true;
 };
