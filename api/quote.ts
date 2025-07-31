@@ -1,11 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Enable CORS
+  // Configure CORS with specific allowed origins
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+    'https://allogator.vercel.app',
+    'https://portfolio-rebalancer.vercel.app',
+    'http://localhost:5173', // for development
+    'http://localhost:4173'  // for preview
+  ];
+
+  const origin = req.headers.origin;
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    // Allow requests with no origin (like curl/Postman)
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Add security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -18,8 +41,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { symbol } = req.query;
 
+  // Enhanced symbol validation
+  const VALID_SYMBOL_REGEX = /^[A-Z0-9\-\.]{1,12}$/;
+  const BLOCKED_PATTERNS = ['SCRIPT', 'EVAL', 'FUNCTION', 'JAVASCRIPT', 'VBSCRIPT'];
+
   if (!symbol || typeof symbol !== 'string') {
     return res.status(400).json({ error: 'Symbol parameter is required' });
+  }
+
+  const sanitizedSymbol = symbol.trim().toUpperCase();
+
+  if (!VALID_SYMBOL_REGEX.test(sanitizedSymbol)) {
+    return res.status(400).json({ error: 'Invalid symbol format. Use only letters, numbers, hyphens, and dots (max 12 characters)' });
+  }
+
+  if (BLOCKED_PATTERNS.some(pattern => sanitizedSymbol.includes(pattern))) {
+    return res.status(400).json({ error: 'Invalid symbol' });
   }
 
   // Get API keys from environment variables
@@ -27,21 +64,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKeys = apiKeysString.split(',').map(key => key.trim()).filter(key => key);
   
   if (apiKeys.length === 0) {
-    console.error('No API keys configured');
+    // No API keys configured
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
   // Try each API key until one works
   for (let i = 0; i < apiKeys.length; i++) {
     const apiKey = apiKeys[i];
-    const finnhubUrl = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`;
+    const finnhubUrl = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sanitizedSymbol)}&token=${apiKey}`;
     
     try {
       const response = await fetch(finnhubUrl);
       
       // If rate limited, try next key
       if (response.status === 429 && i < apiKeys.length - 1) {
-        console.log(`API key ${i + 1} rate limited, trying next key...`);
+        // Rate limited, try next key
         continue;
       }
       
@@ -55,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       return res.status(response.status).json(data);
     } catch (error) {
-      console.error(`Error with API key ${i + 1}:`, error);
+      // Error with current API key
       
       // If this was the last key, return error
       if (i === apiKeys.length - 1) {

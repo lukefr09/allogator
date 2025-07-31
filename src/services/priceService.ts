@@ -21,6 +21,7 @@ class PriceService {
   private requestQueue: Promise<any> = Promise.resolve();
   private lastRequestTime = 0;
   private minRequestInterval = 1100; // 1.1 seconds between requests to avoid rate limits
+  private pendingRequests: Map<string, Promise<PriceData | null>> = new Map();
   
   constructor(config: PriceServiceConfig) {
     this.useServerless = config.useServerless ?? true; // Default to serverless
@@ -55,11 +56,31 @@ class PriceService {
   
   
   async fetchPrice(symbol: string): Promise<PriceData | null> {
+    // Check if request is already pending
+    const pending = this.pendingRequests.get(symbol);
+    if (pending) {
+      return pending;
+    }
+
+    // Check cache first
     const cached = this.cache.get(symbol);
     if (cached && Date.now() - new Date(cached.timestamp).getTime() < this.cacheTimeout) {
       return { symbol, price: cached.price, timestamp: cached.timestamp };
     }
 
+    // Create new request
+    const request = this.performFetch(symbol);
+    this.pendingRequests.set(symbol, request);
+
+    try {
+      const result = await request;
+      return result;
+    } finally {
+      this.pendingRequests.delete(symbol);
+    }
+  }
+
+  private async performFetch(symbol: string): Promise<PriceData | null> {
     // Queue the request to avoid rate limits
     return this.requestQueue = this.requestQueue.then(async () => {
       // Check cache again in case another request already fetched it
@@ -84,7 +105,7 @@ class PriceService {
         
         if (response.status === 429) {
           if (!this.useServerless && this.apiKeys.length > 1) {
-            console.log(`API key ${this.currentKeyIndex + 1} rate limited, rotating to next key...`);
+            // API key rate limited, rotating to next key
             this.rotateApiKey();
             return this.fetchPrice(symbol);
           }
@@ -118,7 +139,7 @@ class PriceService {
         
         return { symbol, price, timestamp };
       } catch (error) {
-        console.error(`Failed to fetch price for ${symbol}:`, error);
+        // Failed to fetch price - return null
         return null;
       }
     });

@@ -11,12 +11,16 @@ export default defineConfig({
         manualChunks: {
           // Split vendor chunks for better caching
           vendor: ['react', 'react-dom'],
-          analytics: ['@vercel/analytics/react']
+          analytics: ['@vercel/analytics/react', '@vercel/speed-insights/react']
         }
       }
     },
     // Enable minification (esbuild is default and faster than terser)
-    minify: 'esbuild'
+    minify: 'esbuild',
+    target: 'es2015',
+    cssCodeSplit: true,
+    sourcemap: false, // Disable sourcemaps in production for security
+    chunkSizeWarningLimit: 1000
   },
   // Enable compression
   server: {
