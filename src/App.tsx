@@ -492,12 +492,12 @@ const PortfolioRebalancer = () => {
       
       <Header newMoney={newMoney} onNewMoneyChange={setNewMoney} />
       
-      <div className="min-h-screen pt-40 sm:pt-32 pb-8 overflow-hidden">
+      <div className="min-h-screen pt-32 sm:pt-32 pb-8 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           
           {/* Main Content Grid */}
           <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Left Column - Portfolio Management (Scrollable) */}
+            {/* Left Column - Portfolio Management */}
             <div className="lg:col-span-2 space-y-6 relative z-10 lg:pr-4 lg:pb-8">
               {/* Asset List */}
               <AssetList
@@ -544,8 +544,8 @@ const PortfolioRebalancer = () => {
               {validationErrors.length === 0 && allocations.length > 0 && (
                 <>
                   <GlassCard variant="light" padding="lg" animate allowOverflow={true}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-semibold text-gray-100 relative">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                      <h2 className="text-lg sm:text-xl font-semibold text-gray-100 relative">
                         How to Allocate <AnimatedNumber value={newMoney} prefix="$" className="text-emerald-400" />
                         <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
                           <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -571,15 +571,15 @@ const PortfolioRebalancer = () => {
                     <div className="space-y-3">
                       {isLoadingPrices && allocations.length === 0 ? (
                         <>
-                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                          <div className="flex justify-between items-center py-2 sm:py-3 border-b border-white/5">
                             <Skeleton width="60px" height="20px" />
                             <Skeleton width="80px" height="20px" />
                           </div>
-                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                          <div className="flex justify-between items-center py-2 sm:py-3 border-b border-white/5">
                             <Skeleton width="60px" height="20px" />
                             <Skeleton width="80px" height="20px" />
                           </div>
-                          <div className="flex justify-between items-center py-3 border-b border-white/5">
+                          <div className="flex justify-between items-center py-2 sm:py-3 border-b border-white/5">
                             <Skeleton width="60px" height="20px" />
                             <Skeleton width="80px" height="20px" />
                           </div>
@@ -594,18 +594,18 @@ const PortfolioRebalancer = () => {
                           return (
                             <div
                               key={allocation.symbol}
-                              className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 animate-slide-up"
+                              className="flex justify-between items-center py-2 sm:py-3 border-b border-white/5 last:border-0 animate-slide-up"
                               style={{ animationDelay: `${index * 50}ms` }}
                             >
-                              <span className="font-medium text-gray-200">{getDisplayName(allocation.symbol)}</span>
-                              <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-200 text-sm sm:text-base">{getDisplayName(allocation.symbol)}</span>
+                              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-0 sm:gap-2">
                                 <AnimatedNumber
                                   value={allocation.amountToAdd}
                                   prefix="$"
-                                  className="text-emerald-400 font-semibold"
+                                  className="text-emerald-400 font-semibold text-sm sm:text-base"
                                 />
                                 {showSharesInAllocation && sharesToBuy !== null && (
-                                  <span className="text-gray-500 text-sm">
+                                  <span className="text-gray-500 text-xs sm:text-sm">
                                     ({sharesToBuy < 1 ? sharesToBuy.toFixed(4) : sharesToBuy.toFixed(2)} shares)
                                   </span>
                                 )}
@@ -627,7 +627,7 @@ const PortfolioRebalancer = () => {
                   
                   <GlassCard variant="dark" padding="lg" animate allowOverflow={true}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-100 relative">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-100 relative">
                         After Investment
                         <span className="ml-2 text-gray-500 cursor-help group/tooltip relative">
                           <svg className="w-4 h-4 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -655,21 +655,27 @@ const PortfolioRebalancer = () => {
                         )}
                       </button>
                     </div>
-                    <div className="text-xs text-gray-400 mb-4 flex items-center gap-4">
+                    <div className="text-xs text-gray-400 mb-4 flex flex-wrap items-center gap-2 sm:gap-4">
                       <span className="flex items-center gap-1 cursor-help group/tooltip relative">
-                        <span className="w-2 h-2 bg-emerald-400 rounded-full"></span> On target
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></span>
+                        <span className="hidden sm:inline">On target</span>
+                        <span className="sm:hidden">On</span>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
                           Less than 0.5% difference<br/>from target allocation
                         </span>
                       </span>
                       <span className="flex items-center gap-1 cursor-help group/tooltip relative">
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span> Slightly off
+                        <span className="w-2 h-2 bg-yellow-400 rounded-full flex-shrink-0"></span>
+                        <span className="hidden sm:inline">Slightly off</span>
+                        <span className="sm:hidden">Off</span>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
                           0.5% to 2% difference<br/>from target allocation
                         </span>
                       </span>
                       <span className="flex items-center gap-1 cursor-help group/tooltip relative">
-                        <span className="w-2 h-2 bg-red-400 rounded-full"></span> Needs rebalancing
+                        <span className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></span>
+                        <span className="hidden sm:inline">Needs rebalancing</span>
+                        <span className="sm:hidden">Rebalance</span>
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
                           More than 2% difference<br/>from target allocation
                         </span>
@@ -714,43 +720,32 @@ const PortfolioRebalancer = () => {
                         return (
                           <div
                             key={allocation.symbol}
-                            className="glass-light p-3 rounded-lg animate-slide-up"
+                            className="glass-light p-2 sm:p-3 rounded-lg animate-slide-up"
                             style={{ animationDelay: `${index * 50 + 300}ms` }}
                           >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <span className={`w-2 h-2 ${statusColor} rounded-full`}></span>
-                                <span className="font-medium">{getDisplayName(allocation.symbol)}</span>
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`w-2 h-2 ${statusColor} rounded-full flex-shrink-0`}></span>
+                                <span className="font-medium text-sm sm:text-base truncate">{getDisplayName(allocation.symbol)}</span>
                               </div>
-                              <div className="text-right">
+                              <div className="text-right flex-shrink-0">
                                 <AnimatedNumber
                                   value={allocation.newValue}
                                   prefix="$"
-                                  className="font-semibold"
+                                  className="font-semibold text-sm sm:text-base"
                                 />
-                                <div className="text-xs text-gray-400 mt-1 flex items-center justify-end gap-2">
-                                  <span className="px-1.5 py-0.5 bg-gray-700/50 rounded text-gray-400 cursor-help group/tooltip relative">
+                                <div className="text-xs text-gray-400 mt-1 flex flex-wrap items-center justify-end gap-1 sm:gap-2">
+                                  <span className="px-1 py-0.5 bg-gray-700/50 rounded text-gray-400 text-[10px] sm:text-xs">
                                     {currentPercentage.toFixed(1)}%
-                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                                      Current allocation before<br/>investing new money
-                                    </span>
                                   </span>
-                                  <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <svg className="w-2 h-2 sm:w-3 sm:h-3 text-gray-500 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                   </svg>
-                                  <span className="px-1.5 py-0.5 bg-gray-800/50 rounded text-gray-300 cursor-help group/tooltip relative">
+                                  <span className="px-1 py-0.5 bg-gray-800/50 rounded text-gray-300 text-[10px] sm:text-xs">
                                     {allocation.newPercentage.toFixed(1)}%
-                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                                      New allocation after<br/>investing ${newMoney.toLocaleString()}
-                                    </span>
                                   </span>
-                                  <span className={`font-medium ${textColor} cursor-help group/tooltip relative`}>
+                                  <span className={`font-medium ${textColor} text-[10px] sm:text-xs`}>
                                     ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
-                                    <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                                      This is the difference between the new<br/>
-                                      allocation ({allocation.newPercentage.toFixed(1)}%) and target ({((asset?.targetPercentage || 0) * 100).toFixed(1)}%)<br/>
-                                      {absDiff < 0.5 ? 'Perfectly balanced ✓' : absDiff < 2 ? 'Close to target' : 'Consider rebalancing'}
-                                    </span>
                                   </span>
                                 </div>
                               </div>

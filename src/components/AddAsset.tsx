@@ -62,9 +62,9 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
         </div>
       </div>
       
-      <form onSubmit={handleSubmit} className="flex gap-3 overflow-visible">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 overflow-visible">
         <div className="flex-1">
-          <label className="block text-xs font-medium text-gray-400 mb-1 -mt-2">
+          <label className="block text-xs font-medium text-gray-400 mb-1">
             Symbol
             <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
               ⓘ
@@ -73,62 +73,65 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
               </span>
             </span>
           </label>
-          <input
-            ref={symbolInputRef}
-            type="text"
-            placeholder="Symbol (e.g., SPY)"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            className="glass-input w-full uppercase font-semibold"
-            maxLength={10}
-            disabled={isMaxAssets}
-          />
-          {symbol && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <svg className="w-4 h-4 text-emerald-400 animate-fade-in" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          )}
+          <div className="relative">
+            <input
+              ref={symbolInputRef}
+              type="text"
+              placeholder="Symbol (e.g., SPY)"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              className="glass-input w-full uppercase font-semibold"
+              maxLength={10}
+              disabled={isMaxAssets}
+            />
+            {symbol && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <svg className="w-4 h-4 text-emerald-400 animate-fade-in" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+          </div>
         </div>
         
-        <div className="w-32 relative">
-          <label className="block text-xs font-medium text-gray-400 mb-1 -mt-2">
-            Target %
-            <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
-              ⓘ
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
-                Target allocation percentage<br/>for this asset in your portfolio
+        <div className="flex gap-3">
+          <div className="w-28 sm:w-32 relative">
+            <label className="block text-xs font-medium text-gray-400 mb-1">
+              Target %
+              <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                ⓘ
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
+                  Target allocation percentage<br/>for this asset in your portfolio
+                </span>
               </span>
-            </span>
-          </label>
-          <input
-            type="number"
-            placeholder="Target"
-            value={targetPercentage}
-            onChange={(e) => setTargetPercentage(e.target.value)}
-            className="glass-input w-full pr-8 font-medium tabular-nums"
-            step="0.1"
-            min="0.1"
-            max="100"
-            disabled={isMaxAssets}
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
-        </div>
-        
-        <button
-          type="submit"
-          className={`
-            px-4 py-3 font-medium rounded-lg transition-all duration-300 self-end
-            ${isMaxAssets 
-              ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
-              : isAdding
-                ? 'bg-emerald-600 text-white scale-95'
-                : 'btn-primary'
-            }
-          `}
-          disabled={isMaxAssets || isAdding || !symbol || !targetPercentage}
-        >
+            </label>
+            <input
+              type="number"
+              placeholder="Target"
+              value={targetPercentage}
+              onChange={(e) => setTargetPercentage(e.target.value)}
+              className="glass-input w-full pr-8 font-medium tabular-nums"
+              step="0.1"
+              min="0.1"
+              max="100"
+              disabled={isMaxAssets}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+          </div>
+          
+          <button
+            type="submit"
+            className={`
+              px-3 sm:px-4 py-2 sm:py-3 font-medium rounded-lg transition-all duration-300 self-end text-sm sm:text-base
+              ${isMaxAssets 
+                ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
+                : isAdding
+                  ? 'bg-emerald-600 text-white scale-95'
+                  : 'btn-primary'
+              }
+            `}
+            disabled={isMaxAssets || isAdding || !symbol || !targetPercentage}
+          >
           <span className={`transition-opacity duration-200 ${isAdding ? 'opacity-0' : 'opacity-100'}`}>
             Add Asset
           </span>
@@ -141,6 +144,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
             </div>
           )}
         </button>
+        </div>
       </form>
       
       {isMaxAssets && (

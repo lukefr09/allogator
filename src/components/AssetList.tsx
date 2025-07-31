@@ -40,18 +40,19 @@ const AssetList: React.FC<AssetListProps> = ({
   return (
     <GlassCard variant="dark" padding="lg" className="mb-8" allowOverflow={true}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 relative z-20">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-100 mb-1">Portfolio Assets</h2>
-          <p className="text-sm text-gray-400">
-            Current Portfolio Value: <span className="text-white font-semibold tabular-nums">{formatCurrency(currentTotal)}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-3 relative z-10">
-          {lastPriceUpdate && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span className="hidden sm:inline">Prices updated: {new Date(lastPriceUpdate).toLocaleTimeString()}</span>
-              <span className="sm:hidden">Updated: {new Date(lastPriceUpdate).toLocaleTimeString()}</span>
+      <div className="mb-6 relative z-20">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-100 mb-1">Portfolio Assets</h2>
+            <p className="text-sm text-gray-400">
+              Current Value: <span className="text-white font-semibold tabular-nums">{formatCurrency(currentTotal)}</span>
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+            {lastPriceUpdate && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="hidden sm:inline">Prices updated: {new Date(lastPriceUpdate).toLocaleTimeString()}</span>
+                <span className="sm:hidden">{new Date(lastPriceUpdate).toLocaleTimeString()}</span>
               {onRefreshPrices && (
                 <button
                   onClick={async () => {
@@ -75,14 +76,17 @@ const AssetList: React.FC<AssetListProps> = ({
               )}
             </div>
           )}
-          <div className={`glass-light px-4 py-2 rounded-lg text-sm font-medium ${isValidTotal ? 'text-emerald-400' : 'text-red-400'}`}>
-            <span className="text-gray-400 mr-2">Target Total:</span>
-            {totalPercentage.toFixed(1)}%
+            <div className="flex items-center gap-2">
+              <div className={`glass-light px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium ${isValidTotal ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className="text-gray-400 mr-1">Total:</span>
+                {totalPercentage.toFixed(1)}%
+              </div>
+              <ViewModeToggle 
+                viewMode={viewMode} 
+                onViewModeChange={onViewModeChange} 
+              />
+            </div>
           </div>
-          <ViewModeToggle 
-            viewMode={viewMode} 
-            onViewModeChange={onViewModeChange} 
-          />
         </div>
       </div>
       
@@ -115,11 +119,11 @@ const AssetList: React.FC<AssetListProps> = ({
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
           >
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              {/* Top Row on Mobile: Symbol and Value/Shares */}
-              <div className="flex gap-3 sm:contents">
+            <div className="space-y-4">
+              {/* Symbol and Price Row */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 {/* Symbol Input */}
-                <div className="flex-1 sm:flex-initial sm:w-44 overflow-visible">
+                <div className="w-full sm:w-44 overflow-visible">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
                     Symbol
                     <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
@@ -153,12 +157,12 @@ const AssetList: React.FC<AssetListProps> = ({
                     <Skeleton width="120px" height="14px" />
                   ) : asset.currentPrice ? (
                     <>
-                      <div>
+                      <div className="truncate">
                         <span className="font-medium text-gray-400">{getDisplayName(asset.symbol)}</span>
-                        <span className="mx-1">@</span>
-                        <span className="font-medium text-gray-300">{formatCurrency(asset.currentPrice)}</span>
+                        <span className="mx-1 hidden sm:inline">@</span>
+                        <span className="font-medium text-gray-300 ml-1 sm:ml-0">{formatCurrency(asset.currentPrice)}</span>
                         {asset.priceSource === 'manual' && (
-                          <span className="ml-1 text-yellow-400">(manual)</span>
+                          <span className="ml-1 text-yellow-400 hidden sm:inline">(manual)</span>
                         )}
                       </div>
                       {manualPriceIndex === index ? (
@@ -193,7 +197,7 @@ const AssetList: React.FC<AssetListProps> = ({
                       ) : (
                         <button
                           onClick={() => setManualPriceIndex(index)}
-                          className="text-xs text-gray-500 hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                          className="text-xs text-gray-500 hover:text-gray-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ml-2 p-1"
                           title="Set price manually"
                         >
                           ✎
@@ -205,7 +209,7 @@ const AssetList: React.FC<AssetListProps> = ({
                 </div>
                 
                 {/* Current Value/Shares Input */}
-                <div className="flex-1 sm:flex-initial sm:w-44 overflow-visible">
+                <div className="w-full sm:w-44 overflow-visible">
                 {viewMode === 'money' ? (
                   <>
                     <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
@@ -243,18 +247,18 @@ const AssetList: React.FC<AssetListProps> = ({
                         min="0"
                       />
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 overflow-visible whitespace-nowrap relative" style={{zIndex: 999}}>
+                    <div className="mt-2 text-xs text-gray-500 overflow-visible relative" style={{zIndex: 999}}>
                       {asset.symbol && !asset.currentPrice && isLoadingPrices ? (
                         <Skeleton width="140px" height="14px" />
                       ) : asset.currentPrice && asset.currentValue > 0 ? (
-                        <>
+                        <div className="truncate">
                           <span className="font-medium text-gray-400">
                             {(asset.shares || (asset.currentValue / asset.currentPrice)).toFixed(3)}
                           </span>
                           <span className="ml-1">shares</span>
-                          <span className="mx-1">=</span>
-                          <span className="font-medium text-gray-300">{formatCurrency(asset.currentValue)}</span>
-                        </>
+                          <span className="mx-1 hidden sm:inline">=</span>
+                          <span className="font-medium text-gray-300 ml-1 sm:ml-0 hidden sm:inline">{formatCurrency(asset.currentValue)}</span>
+                        </div>
                       ) : null}
                     </div>
                   </>
@@ -307,16 +311,16 @@ const AssetList: React.FC<AssetListProps> = ({
                         disabled={!asset.currentPrice}
                       />
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 overflow-visible whitespace-nowrap relative" style={{zIndex: 999}}>
+                    <div className="mt-2 text-xs text-gray-500 overflow-visible relative" style={{zIndex: 999}}>
                       {asset.currentPrice && asset.shares && asset.shares > 0 ? (
-                        <>
+                        <div className="truncate">
                           <span className="font-medium text-gray-400">{asset.shares.toFixed(3)}</span>
                           <span className="ml-1">shares</span>
-                          <span className="mx-1">=</span>
-                          <span className="font-medium text-gray-300">{formatCurrency(asset.shares * asset.currentPrice)}</span>
-                        </>
+                          <span className="mx-1 hidden sm:inline">=</span>
+                          <span className="font-medium text-gray-300 ml-1 sm:ml-0 hidden sm:inline">{formatCurrency(asset.shares * asset.currentPrice)}</span>
+                        </div>
                       ) : !asset.currentPrice ? (
-                        <span className="text-red-400/80">Price needed for shares</span>
+                        <span className="text-red-400/80">Price needed</span>
                       ) : null}
                     </div>
                   </>
@@ -324,10 +328,10 @@ const AssetList: React.FC<AssetListProps> = ({
                 </div>
               </div>
               
-              {/* Bottom Row on Mobile: Target % and Remove Button */}
-              <div className="flex gap-3 sm:contents">
+              {/* Target % and Remove Button Row */}
+              <div className="flex gap-3 items-end">
                 {/* Target Percentage Input */}
-                <div className="flex-1 sm:flex-initial sm:w-32">
+                <div className="flex-1 sm:w-32">
                 <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
                   Target %
                   <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
@@ -367,11 +371,11 @@ const AssetList: React.FC<AssetListProps> = ({
                 </div>
                 
                 {/* Remove Button */}
-                <div className="flex items-center justify-center sm:self-center sm:ml-6 sm:-mt-2">
+                <div className="flex-shrink-0">
                   <button
                     onClick={() => onRemoveAsset(index)}
                     className={`
-                      p-4 rounded-lg transition-all duration-200 mt-6 sm:mt-0
+                      p-3 rounded-lg transition-all duration-200
                       ${assets.length <= 2 
                         ? 'bg-gray-800 text-gray-600 cursor-not-allowed' 
                         : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:scale-110 active:scale-95'
@@ -380,7 +384,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     disabled={assets.length <= 2}
                     title={assets.length <= 2 ? "Minimum 2 assets required" : "Remove asset"}
                   >
-                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>

@@ -27,7 +27,7 @@ const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onViewModeCha
       
       <button
         onClick={() => onViewModeChange('money')}
-        className={`px-2 py-1 text-sm rounded transition-all duration-200 flex items-center gap-1 ${
+        className={`px-1.5 sm:px-2 py-1 text-xs sm:text-sm rounded transition-all duration-200 flex items-center gap-1 ${
           viewMode === 'money'
             ? 'bg-blue-500/20 text-blue-400 shadow-sm'
             : 'text-gray-500 hover:text-gray-400'
@@ -38,7 +38,7 @@ const ViewModeToggle: React.FC<ViewModeToggleProps> = ({ viewMode, onViewModeCha
       </button>
       <button
         onClick={() => onViewModeChange('shares')}
-        className={`px-2 py-1 text-sm rounded transition-all duration-200 flex items-center gap-1 ${
+        className={`px-1.5 sm:px-2 py-1 text-xs sm:text-sm rounded transition-all duration-200 flex items-center gap-1 ${
           viewMode === 'shares'
             ? 'bg-blue-500/20 text-blue-400 shadow-sm'
             : 'text-gray-500 hover:text-gray-400'
