@@ -141,7 +141,7 @@ const PortfolioRebalancer = () => {
     }
   };
   
-  const handleUpdateAsset = async (index: number, field: keyof Asset, value: number | string) => {
+  const handleUpdateAsset = async (index: number, field: keyof Asset, value: number | string | boolean) => {
     const updated = [...assets];
     if (field === 'symbol') {
       const oldSymbol = updated[index].symbol;
@@ -237,6 +237,8 @@ const PortfolioRebalancer = () => {
       updated[index].lastUpdated = value as string;
     } else if (field === 'priceSource') {
       updated[index].priceSource = value as 'api' | 'manual';
+    } else if (field === 'noSell') {
+      updated[index].noSell = value as boolean;
     }
     setAssets(updated);
   };
@@ -562,7 +564,9 @@ const PortfolioRebalancer = () => {
                           </svg>
                           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
                             {enableSelling 
-                              ? 'Buy and sell amounts to achieve perfect target allocation' 
+                              ? assets.some(a => a.noSell)
+                                ? 'Buy and sell amounts (respecting locked assets)'
+                                : 'Buy and sell amounts to achieve perfect target allocation'
                               : 'Recommended amounts to invest in each asset to maintain your target allocation'}
                           </span>
                         </span>
@@ -683,7 +687,12 @@ const PortfolioRebalancer = () => {
                     {enableSelling ? (
                       <div className="text-xs text-gray-400 mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-emerald-400 rounded-full flex-shrink-0"></span>
-                        <span>All assets perfectly balanced at target allocation</span>
+                        <span>
+                          {assets.some(a => a.noSell) 
+                            ? 'Assets balanced (some locked from selling)'
+                            : 'All assets perfectly balanced at target allocation'
+                          }
+                        </span>
                       </div>
                     ) : (
                       <div className="text-xs text-gray-400 mb-4 flex flex-wrap items-center gap-2 sm:gap-4">
@@ -741,15 +750,13 @@ const PortfolioRebalancer = () => {
                         let statusColor = 'bg-emerald-400';
                         let textColor = 'text-emerald-400';
                         
-                        // Only show yellow/red status when not in perfect rebalancing mode
-                        if (!enableSelling) {
-                          if (absDiff >= 2) {
-                            statusColor = 'bg-red-400';
-                            textColor = 'text-red-400';
-                          } else if (absDiff >= 0.5) {
-                            statusColor = 'bg-yellow-400';
-                            textColor = 'text-yellow-400';
-                          }
+                        // Show color status based on difference from target
+                        if (absDiff >= 2) {
+                          statusColor = 'bg-red-400';
+                          textColor = 'text-red-400';
+                        } else if (absDiff >= 0.5) {
+                          statusColor = 'bg-yellow-400';
+                          textColor = 'text-yellow-400';
                         }
                         
                         return (
@@ -785,22 +792,13 @@ const PortfolioRebalancer = () => {
                                       New allocation after investment
                                     </span>
                                   </span>
-                                  {!enableSelling && (
-                                    <span className={`font-medium ${textColor} text-[10px] sm:text-xs cursor-help group/diff relative`}>
-                                      ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
-                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/diff:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
-                                        Difference from target ({allocation.targetPercentage.toFixed(1)}%)
-                                      </span>
+                                  <span className={`font-medium ${textColor} text-[10px] sm:text-xs cursor-help group/diff relative`}>
+                                    ({allocation.difference > 0 ? '+' : ''}{allocation.difference.toFixed(1)}%)
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/diff:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
+                                      Difference from target ({allocation.targetPercentage.toFixed(1)}%)
+                                      {enableSelling && asset?.noSell && (<><br/><span className="text-amber-400">Asset locked - no selling</span></>)}
                                     </span>
-                                  )}
-                                  {enableSelling && (
-                                    <span className="font-medium text-emerald-400 text-[10px] sm:text-xs cursor-help group/perfect relative">
-                                      (Perfect)
-                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/perfect:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 9999}}>
-                                        Exactly at target allocation
-                                      </span>
-                                    </span>
-                                  )}
+                                  </span>
                                 </div>
                               </div>
                             </div>

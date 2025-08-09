@@ -13,15 +13,20 @@ export const calculateAllocations = (
     return assets.map(asset => {
       const targetValue = newTotal * asset.targetPercentage;
       const currentValue = asset.currentValue;
-      const difference = targetValue - currentValue;
+      let difference = targetValue - currentValue;
+      
+      // If asset has noSell flag, only allow buying (no negative amounts)
+      if (asset.noSell && difference < 0) {
+        difference = 0;
+      }
       
       return {
         symbol: asset.symbol,
-        amountToAdd: parseFloat(difference.toFixed(2)), // Can be negative for selling
-        newValue: parseFloat(targetValue.toFixed(2)),
-        newPercentage: asset.targetPercentage * 100,
+        amountToAdd: parseFloat(difference.toFixed(2)), // Can be negative for selling unless noSell is true
+        newValue: parseFloat((currentValue + difference).toFixed(2)),
+        newPercentage: ((currentValue + difference) / newTotal) * 100,
         targetPercentage: asset.targetPercentage * 100,
-        difference: 0 // Perfect rebalancing means no difference
+        difference: ((currentValue + difference) / newTotal) * 100 - (asset.targetPercentage * 100)
       };
     });
   }

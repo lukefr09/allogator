@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Asset } from '../types';
 import GlassCard from './GlassCard';
+import { preventNumberInputScroll } from '../utils/preventNumberScroll';
 
 interface AddAssetProps {
   onAddAsset: (asset: Omit<Asset, 'currentValue'>) => void | Promise<void>;
@@ -113,6 +114,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
               placeholder="Target"
               value={targetPercentage}
               onChange={(e) => setTargetPercentage(e.target.value)}
+              onWheel={preventNumberInputScroll}
               className="glass-input w-full pr-8 font-medium tabular-nums"
               step="0.1"
               min={enableSelling ? "0" : "0.1"}

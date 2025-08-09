@@ -5,10 +5,11 @@ import ViewModeToggle from './ViewModeToggle';
 import Skeleton from './Skeleton';
 import { formatCurrency } from '../utils/formatters';
 import { getDisplayName } from '../utils/displayNames';
+import { preventNumberInputScroll } from '../utils/preventNumberScroll';
 
 interface AssetListProps {
   assets: Asset[];
-  onUpdateAsset: (index: number, field: keyof Asset, value: number | string) => void;
+  onUpdateAsset: (index: number, field: keyof Asset, value: number | string | boolean) => void;
   onRemoveAsset: (index: number) => void;
   totalPercentage: number;
   onRefreshPrices?: () => void;
@@ -127,11 +128,21 @@ const AssetList: React.FC<AssetListProps> = ({
                 {/* Symbol Input */}
                 <div className="w-full sm:w-44 overflow-visible">
                   <label className="block text-xs font-medium text-gray-400 mb-1.5 relative">
-                    Symbol
-                    <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
-                      ⓘ
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
-                        The ticker symbol for your asset<br/>(e.g., AAPL, VOO, BTC)
+                    <span className="flex items-center gap-1">
+                      Symbol
+                      {asset.noSell && enableSelling && (
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-500" title="Asset locked - no selling allowed">
+                          <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
+                      <span className="ml-1 text-gray-500 cursor-help group/tooltip relative">
+                        ⓘ
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
+                          The ticker symbol for your asset<br/>(e.g., AAPL, VOO, BTC)
+                          {asset.noSell && enableSelling && (<><br/><span className="text-amber-400">🔒 Asset locked - no selling</span></>)}
+                        </span>
                       </span>
                     </span>
                   </label>
@@ -174,6 +185,7 @@ const AssetList: React.FC<AssetListProps> = ({
                             placeholder="Price"
                             className="glass-input text-xs px-2 py-0.5 w-16"
                             step="0.01"
+                            onWheel={preventNumberInputScroll}
                             autoFocus
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -229,6 +241,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         type="number"
                         defaultValue={asset.currentValue.toString()}
                         key={`value-${index}-${asset.currentValue}`} // Force re-render when value changes externally
+                        onWheel={preventNumberInputScroll}
                         onChange={(e) => {
                           // Just store the value temporarily, don't validate yet
                           e.target.dataset.tempValue = e.target.value;
@@ -281,6 +294,7 @@ const AssetList: React.FC<AssetListProps> = ({
                         type="number"
                         defaultValue={asset.shares ? (Math.round(asset.shares * 1000000) / 1000000).toString() : ''}
                         key={`shares-${index}-${asset.shares}`} // Force re-render when shares change externally
+                        onWheel={preventNumberInputScroll}
                         onChange={(e) => {
                           // Just store the value temporarily, don't validate yet
                           e.target.dataset.tempValue = e.target.value;
@@ -328,6 +342,53 @@ const AssetList: React.FC<AssetListProps> = ({
                   </>
                 )}
                 </div>
+                
+                {/* No Sell Toggle - Aligned with other inputs */}
+                {enableSelling && (
+                  <div className="w-full sm:w-36 overflow-visible">
+                    <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                      Lock Asset
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateAsset(index, 'noSell', !asset.noSell)}
+                      className="w-full flex items-center gap-3 glass-input px-3 py-[10px] hover:bg-white/5 transition-colors"
+                    >
+                      <div
+                        className={`
+                          relative w-11 h-6 rounded-full transition-all duration-300
+                          ${asset.noSell 
+                            ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/20' 
+                            : 'bg-gray-700'
+                          }
+                        `}
+                      >
+                        <span 
+                          className={`
+                            absolute top-[2px] left-[2px] bg-white w-5 h-5 rounded-full transition-all duration-300 shadow-md
+                            ${asset.noSell ? 'translate-x-5' : 'translate-x-0'}
+                          `}
+                        >
+                          {asset.noSell && (
+                            <svg className="w-5 h-5 text-amber-600 p-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </span>
+                      </div>
+                      <span className={`text-sm font-medium ${asset.noSell ? 'text-amber-400' : 'text-gray-400'}`}>
+                        {asset.noSell ? 'Locked' : 'Unlocked'}
+                      </span>
+                    </button>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {asset.noSell ? (
+                        <span className="text-amber-400/80">No selling allowed</span>
+                      ) : (
+                        <span>Can be sold</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Target % and Remove Button Row */}
@@ -349,6 +410,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     type="number"
                     defaultValue={(asset.targetPercentage * 100).toFixed(1)}
                     key={`target-${index}-${asset.targetPercentage}`} // Force re-render when target changes externally
+                    onWheel={preventNumberInputScroll}
                     onChange={(e) => {
                       // Just store the value temporarily, don't validate yet
                       e.target.dataset.tempValue = e.target.value;

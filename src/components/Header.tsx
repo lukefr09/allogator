@@ -1,4 +1,5 @@
 import React from 'react';
+import { preventNumberInputScroll } from '../utils/preventNumberScroll';
 
 interface HeaderProps {
   newMoney: number;
@@ -51,6 +52,7 @@ const Header: React.FC<HeaderProps> = ({ newMoney, onNewMoneyChange, enableSelli
                         onNewMoneyChange(1000000);
                       }
                     }}
+                    onWheel={preventNumberInputScroll}
                     className="glass-input w-full sm:w-40 pl-8 text-base font-semibold tabular-nums"
                     step="0.01"
                     min="0.01"

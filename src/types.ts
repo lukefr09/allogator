@@ -6,6 +6,7 @@ export interface Asset {
   lastUpdated?: string;
   priceSource?: 'api' | 'manual';
   shares?: number;
+  noSell?: boolean;
 }
 
 export type ViewMode = 'money' | 'shares';
