@@ -1,6 +1,6 @@
 import { Asset } from '../types';
 
-export const validatePortfolio = (assets: Asset[]): { isValid: boolean; errors: string[] } => {
+export const validatePortfolio = (assets: Asset[], enableSelling: boolean = false): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
   // Check minimum assets
@@ -31,8 +31,21 @@ export const validatePortfolio = (assets: Asset[]): { isValid: boolean; errors: 
   }
 
   // Check for negative or zero percentages
-  if (assets.some(a => a.targetPercentage <= 0)) {
-    errors.push('Target percentages must be greater than 0');
+  if (enableSelling) {
+    // When selling is enabled, allow 0% but not negative
+    if (assets.some(a => a.targetPercentage < 0)) {
+      errors.push('Target percentages cannot be negative');
+    }
+  } else {
+    // When selling is disabled, percentages must be greater than 0
+    if (assets.some(a => a.targetPercentage <= 0)) {
+      const hasZeroPercentage = assets.some(a => a.targetPercentage === 0);
+      if (hasZeroPercentage) {
+        errors.push('Enable selling mode to set 0% allocations');
+      } else {
+        errors.push('Target percentages must be greater than 0');
+      }
+    }
   }
 
   // Check if percentages sum to 100%

@@ -17,6 +17,7 @@ interface AssetListProps {
   onViewModeChange: (mode: ViewMode) => void;
   priceError?: string;
   isLoadingPrices?: boolean;
+  enableSelling?: boolean;
 }
 
 const AssetList: React.FC<AssetListProps> = ({ 
@@ -29,7 +30,8 @@ const AssetList: React.FC<AssetListProps> = ({
   viewMode,
   onViewModeChange,
   priceError,
-  isLoadingPrices = false
+  isLoadingPrices = false,
+  enableSelling = false
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [manualPriceIndex, setManualPriceIndex] = useState<number | null>(null);
@@ -338,6 +340,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     ⓘ
                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none" style={{zIndex: 1000}}>
                       The percentage of your total portfolio<br/>you want this asset to represent
+                      {enableSelling && (<><br/><span className="text-emerald-400">0% allowed when selling enabled</span></>)}
                     </span>
                   </span>
                 </label>
@@ -363,7 +366,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     className="glass-input w-full pr-8 font-medium tabular-nums"
                     placeholder="0.0"
                     step="0.1"
-                    min="0"
+                    min={enableSelling ? "0" : "0.1"}
                     max="100"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>

@@ -5,9 +5,10 @@ import GlassCard from './GlassCard';
 interface AddAssetProps {
   onAddAsset: (asset: Omit<Asset, 'currentValue'>) => void | Promise<void>;
   currentAssetsCount: number;
+  enableSelling?: boolean;
 }
 
-const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) => {
+const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, enableSelling = false }) => {
   const [symbol, setSymbol] = useState('');
   const [targetPercentage, setTargetPercentage] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -21,7 +22,8 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
     }
 
     const percentage = parseFloat(targetPercentage);
-    if (!symbol || isNaN(percentage) || percentage <= 0 || percentage > 100) {
+    const minPercentage = enableSelling ? 0 : 0.1;
+    if (!symbol || isNaN(percentage) || percentage < minPercentage || percentage > 100) {
       return;
     }
 
@@ -102,6 +104,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
                 ⓘ
                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg" style={{zIndex: 1000}}>
                   Target allocation percentage<br/>for this asset in your portfolio
+                  {enableSelling && (<><br/><span className="text-emerald-400">0% allowed when selling enabled</span></>)}
                 </span>
               </span>
             </label>
@@ -112,7 +115,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount }) =
               onChange={(e) => setTargetPercentage(e.target.value)}
               className="glass-input w-full pr-8 font-medium tabular-nums"
               step="0.1"
-              min="0.1"
+              min={enableSelling ? "0" : "0.1"}
               max="100"
               disabled={isMaxAssets}
             />

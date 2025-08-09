@@ -76,7 +76,7 @@ const PortfolioRebalancer = () => {
   }, []);
   
   useEffect(() => {
-    const validation = validatePortfolio(assets);
+    const validation = validatePortfolio(assets, enableSelling);
     setValidationErrors(validation.errors);
     
     if (validation.isValid && newMoney > 0) {
@@ -518,11 +518,13 @@ const PortfolioRebalancer = () => {
                 onViewModeChange={setViewMode}
                 priceError={priceError}
                 isLoadingPrices={isLoadingPrices}
+                enableSelling={enableSelling}
               />
               
               <AddAsset
                 onAddAsset={handleAddAsset}
                 currentAssetsCount={assets.length}
+                enableSelling={enableSelling}
               />
             </div>
             
