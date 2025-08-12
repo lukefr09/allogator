@@ -8,25 +8,76 @@ export const calculateAllocations = (
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
   
-  // If perfect rebalancing is enabled, calculate exact target values
+  // If selling mode is enabled, handle rebalancing with locked assets
   if (enableSelling) {
-    return assets.map(asset => {
+    // Step 1: Calculate what we can actually sell and what we need to buy
+    let availableCash = newMoney;
+    const allocations: any[] = [];
+    
+    // First pass: identify sells and buys
+    assets.forEach(asset => {
       const targetValue = newTotal * asset.targetPercentage;
       const currentValue = asset.currentValue;
-      let difference = targetValue - currentValue;
+      const idealDifference = targetValue - currentValue;
       
-      // If asset has noSell flag, only allow buying (no negative amounts)
-      if (asset.noSell && difference < 0) {
-        difference = 0;
+      if (asset.noSell) {
+        // Locked asset - can't sell, can only buy if underweight
+        allocations.push({
+          asset,
+          currentValue,
+          targetValue,
+          amountToAdd: idealDifference > 0 ? idealDifference : 0,
+          canSell: false
+        });
+      } else {
+        // Unlocked asset - can buy or sell
+        allocations.push({
+          asset,
+          currentValue,
+          targetValue,
+          amountToAdd: idealDifference,
+          canSell: true
+        });
+        
+        // If selling from this asset, add to available cash
+        if (idealDifference < 0) {
+          availableCash += Math.abs(idealDifference);
+        }
       }
+    });
+    
+    // Step 2: Calculate total buy needs (only positive amounts)
+    const totalBuyNeeded = allocations
+      .filter(a => a.amountToAdd > 0)
+      .reduce((sum, a) => sum + a.amountToAdd, 0);
+    
+    // Step 3: If we don't have enough cash for all buys, scale them down proportionally
+    const scalingFactor = totalBuyNeeded > availableCash ? availableCash / totalBuyNeeded : 1;
+    
+    // Step 4: Apply final allocations
+    return allocations.map(({ asset, currentValue, amountToAdd, canSell }) => {
+      let finalAmount = 0;
+      
+      if (asset.noSell && amountToAdd <= 0) {
+        // Locked and overweight/at target - no change
+        finalAmount = 0;
+      } else if (amountToAdd > 0) {
+        // Needs buying - apply scaling if necessary
+        finalAmount = amountToAdd * scalingFactor;
+      } else if (canSell && amountToAdd < 0) {
+        // Can sell and overweight
+        finalAmount = amountToAdd; // negative value for selling
+      }
+      
+      const newValue = currentValue + finalAmount;
       
       return {
         symbol: asset.symbol,
-        amountToAdd: parseFloat(difference.toFixed(2)), // Can be negative for selling unless noSell is true
-        newValue: parseFloat((currentValue + difference).toFixed(2)),
-        newPercentage: ((currentValue + difference) / newTotal) * 100,
+        amountToAdd: parseFloat(finalAmount.toFixed(2)),
+        newValue: parseFloat(newValue.toFixed(2)),
+        newPercentage: (newValue / newTotal) * 100,
         targetPercentage: asset.targetPercentage * 100,
-        difference: ((currentValue + difference) / newTotal) * 100 - (asset.targetPercentage * 100)
+        difference: (newValue / newTotal) * 100 - (asset.targetPercentage * 100)
       };
     });
   }
