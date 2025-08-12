@@ -29,12 +29,14 @@ const PortfolioRebalancer = () => {
     if (portfolioData) {
       return {
         assets: portfolioData.assets,
-        newMoney: portfolioData.newMoney
+        newMoney: portfolioData.newMoney,
+        enableSelling: portfolioData.enableSelling
       };
     }
     return {
       assets: defaultAssets,
-      newMoney: 1000
+      newMoney: 1000,
+      enableSelling: false
     };
   };
 
@@ -49,7 +51,7 @@ const PortfolioRebalancer = () => {
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showSharesInAllocation, setShowSharesInAllocation] = useState(false);
-  const [enableSelling, setEnableSelling] = useState(false);
+  const [enableSelling, setEnableSelling] = useState(initialState.enableSelling);
   const [disambiguationDialog, setDisambiguationDialog] = useState<{
     index: number;
     symbol: string;
@@ -320,13 +322,13 @@ const PortfolioRebalancer = () => {
   }, [targetColor]);
   
   const handleShare = useCallback(async () => {
-    const url = encodePortfolioToUrl(assets, newMoney);
+    const url = encodePortfolioToUrl(assets, newMoney, enableSelling);
     const success = await copyToClipboard(url);
     if (success) {
       setShowShareSuccess(true);
       setTimeout(() => setShowShareSuccess(false), 3000);
     }
-  }, [assets, newMoney]);
+  }, [assets, newMoney, enableSelling]);
   
   const handleRefreshPrices = useCallback(async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');

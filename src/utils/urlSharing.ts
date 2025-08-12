@@ -7,11 +7,13 @@ interface EncodedAsset {
   t: number;
   p?: number;
   sh?: number;
+  ns?: boolean; // noSell flag
 }
 
 interface EncodedPortfolio {
   assets: EncodedAsset[];
   m: number;
+  es?: boolean; // enableSelling flag
 }
 
 // Validation helper
@@ -31,6 +33,7 @@ const isValidAsset = (asset: any): asset is EncodedAsset => {
   if (asset.t < 0 || asset.t > 1) return false;
   if (asset.p !== undefined && (typeof asset.p !== 'number' || asset.p < 0)) return false;
   if (asset.sh !== undefined && (typeof asset.sh !== 'number' || asset.sh < 0)) return false;
+  if (asset.ns !== undefined && typeof asset.ns !== 'boolean') return false;
   
   // Validate symbol format - allow colons for exchange:symbol format
   if (!/^[A-Z0-9\-\.:]{1,30}$/.test(asset.s)) return false;
@@ -38,23 +41,32 @@ const isValidAsset = (asset: any): asset is EncodedAsset => {
   return true;
 };
 
-export const encodePortfolioToUrl = (assets: Asset[], newMoney: number): string => {
-  const data = {
-    assets: assets.map(a => ({
-      s: a.symbol,
-      v: a.currentValue,
-      t: a.targetPercentage,
-      p: a.currentPrice,
-      sh: a.shares
-    })),
+export const encodePortfolioToUrl = (assets: Asset[], newMoney: number, enableSelling: boolean = false): string => {
+  const data: EncodedPortfolio = {
+    assets: assets.map(a => {
+      const encoded: EncodedAsset = {
+        s: a.symbol,
+        v: a.currentValue,
+        t: a.targetPercentage
+      };
+      if (a.currentPrice !== undefined) encoded.p = a.currentPrice;
+      if (a.shares !== undefined) encoded.sh = a.shares;
+      if (a.noSell) encoded.ns = true; // Only include if true to save space
+      return encoded;
+    }),
     m: newMoney
   };
+  
+  // Only include enableSelling if true to save space
+  if (enableSelling) {
+    data.es = true;
+  }
   
   const encoded = btoa(JSON.stringify(data));
   return `${window.location.origin}${window.location.pathname}?p=${encoded}`;
 };
 
-export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number } | null => {
+export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number, enableSelling: boolean } | null => {
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get('p');
   
@@ -73,6 +85,9 @@ export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number } 
       throw new Error('Invalid new money amount');
     }
     
+    // Validate enableSelling
+    const enableSelling = decoded.es === true; // Default to false if not present
+    
     // Validate and sanitize assets
     const assets = decoded.assets
       .filter(isValidAsset)
@@ -82,7 +97,8 @@ export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number } 
         currentValue: Math.max(0, Math.min(1000000000, a.v)),
         targetPercentage: Math.max(0, Math.min(1, a.t)),
         currentPrice: a.p ? Math.max(0, a.p) : undefined,
-        shares: a.sh ? Math.max(0, a.sh) : undefined
+        shares: a.sh ? Math.max(0, a.sh) : undefined,
+        noSell: a.ns === true // Default to false if not present
       }));
     
     if (assets.length === 0) {
@@ -91,7 +107,8 @@ export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number } 
     
     return {
       assets,
-      newMoney: Math.max(0, Math.min(1000000000, decoded.m))
+      newMoney: Math.max(0, Math.min(1000000000, decoded.m)),
+      enableSelling
     };
   } catch (error) {
     // Silent fail - don't log errors to console
