@@ -7,6 +7,8 @@ import { decodePortfolioFromUrl } from '../utils/urlSharing';
 import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from '../utils/cryptoAliases';
 import { LIMITS, PRECISION, TIMINGS } from '../constants';
 
+const STORAGE_KEY = 'allogator-portfolio';
+
 const defaultAssets: Asset[] = [
   { symbol: 'VOO', currentValue: 600, targetPercentage: 0.50 },
   { symbol: 'QQQ', currentValue: 300, targetPercentage: 0.30 },
@@ -47,6 +49,7 @@ interface UsePortfolioReturn {
 }
 
 function getInitialState() {
+  // URL takes priority (explicit sharing)
   const portfolioData = decodePortfolioFromUrl();
   if (portfolioData) {
     return {
@@ -55,6 +58,24 @@ function getInitialState() {
       enableSelling: portfolioData.enableSelling
     };
   }
+
+  // Try localStorage as fallback
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.assets && Array.isArray(parsed.assets) && parsed.assets.length >= LIMITS.MIN_ASSETS) {
+        return {
+          assets: parsed.assets,
+          newMoney: typeof parsed.newMoney === 'number' ? parsed.newMoney : 1000,
+          enableSelling: typeof parsed.enableSelling === 'boolean' ? parsed.enableSelling : false
+        };
+      }
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+
   return {
     assets: defaultAssets,
     newMoney: 1000,
@@ -92,6 +113,19 @@ export function usePortfolio(): UsePortfolioReturn {
       setAllocations(results);
     } else {
       setAllocations([]);
+    }
+  }, [assets, newMoney, enableSelling]);
+
+  // Save to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        assets,
+        newMoney,
+        enableSelling
+      }));
+    } catch {
+      // Ignore localStorage errors (quota exceeded, private mode, etc.)
     }
   }, [assets, newMoney, enableSelling]);
 
