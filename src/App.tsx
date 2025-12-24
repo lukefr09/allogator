@@ -109,9 +109,9 @@ const PortfolioRebalancer = () => {
 
             <div className="space-y-6 relative z-0 overflow-visible">
               {validationErrors.length > 0 && (
-                <GlassCard variant="default" padding="md" className="border-red-500/20">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <GlassCard variant="default" padding="md" className="border-red-500/20" aria-live="assertive" aria-atomic="true">
+                  <div className="flex items-start gap-3" role="alert">
+                    <svg className="w-5 h-5 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
@@ -148,6 +148,7 @@ const PortfolioRebalancer = () => {
                       <button
                         onClick={() => setShowSharesInAllocation(!showSharesInAllocation)}
                         className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative group/tooltip"
+                        aria-label={showSharesInAllocation ? 'Hide share quantities' : 'Show share quantities'}
                       >
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -244,6 +245,7 @@ const PortfolioRebalancer = () => {
                       <button
                         onClick={handleShare}
                         className="p-1.5 rounded-lg glass-light hover:bg-white/10 transition-colors duration-200 relative group/tooltip"
+                        aria-label="Copy shareable link to clipboard"
                       >
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
@@ -251,11 +253,13 @@ const PortfolioRebalancer = () => {
                         <span className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-800 text-gray-200 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 pointer-events-none shadow-lg z-50" style={{zIndex: 9999}}>
                           Copy shareable link to clipboard
                         </span>
-                        {showShareSuccess && (
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-xs text-green-400 rounded whitespace-nowrap">
-                            Copied!
-                          </span>
-                        )}
+                        <span
+                          className={`absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-800 text-xs text-green-400 rounded whitespace-nowrap transition-opacity ${showShareSuccess ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                          aria-live="polite"
+                          aria-atomic="true"
+                        >
+                          {showShareSuccess ? 'Copied!' : ''}
+                        </span>
                       </button>
                     </div>
                     {enableSelling ? (

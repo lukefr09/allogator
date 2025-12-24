@@ -16,6 +16,7 @@ export const TIMINGS = {
   PRICE_CACHE_MS: 300_000, // 5 minutes
   MIN_REQUEST_INTERVAL_MS: 1_100, // Rate limit protection (60 calls/min)
   INITIAL_PRICE_FETCH_DELAY_MS: 100,
+  FETCH_TIMEOUT_MS: 10_000, // 10 seconds
 } as const;
 
 export const THRESHOLDS = {

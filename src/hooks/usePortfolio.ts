@@ -179,26 +179,23 @@ export function usePortfolio(): UsePortfolioReturn {
     }
 
     const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
-    setAssets(prev => [...prev, assetWithDefaults]);
 
     if (finalSymbol !== '') {
       const priceData = await priceService.fetchPrice(finalSymbol);
       if (priceData) {
-        setAssets(prevAssets => {
-          const updatedAssets = [...prevAssets];
-          const newAssetIndex = updatedAssets.length - 1;
-          if (updatedAssets[newAssetIndex]?.symbol === finalSymbol) {
-            updatedAssets[newAssetIndex] = {
-              ...updatedAssets[newAssetIndex],
-              currentPrice: priceData.price,
-              lastUpdated: priceData.timestamp,
-              priceSource: 'api'
-            };
-          }
-          return updatedAssets;
-        });
+        const assetWithPrice: Asset = {
+          ...assetWithDefaults,
+          currentPrice: priceData.price,
+          lastUpdated: priceData.timestamp,
+          priceSource: 'api'
+        };
+        setAssets(prev => [...prev, assetWithPrice]);
         setLastPriceUpdate(new Date().toISOString());
+      } else {
+        setAssets(prev => [...prev, assetWithDefaults]);
       }
+    } else {
+      setAssets(prev => [...prev, assetWithDefaults]);
     }
   }, [assets.length]);
 
@@ -292,9 +289,11 @@ export function usePortfolio(): UsePortfolioReturn {
   }, [assets]);
 
   const handleRemoveAsset = useCallback((index: number) => {
-    if (assets.length <= LIMITS.MIN_ASSETS) return;
-    setAssets(assets.filter((_, i) => i !== index));
-  }, [assets]);
+    setAssets(prev => {
+      if (prev.length <= LIMITS.MIN_ASSETS) return prev;
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
 
   const handleDisambiguationChoice = useCallback(async (choice: 'stock' | 'crypto', exchange?: 'binance' | 'coinbase') => {
     if (!disambiguationDialog) return;
@@ -311,26 +310,23 @@ export function usePortfolio(): UsePortfolioReturn {
       }
 
       const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
-      setAssets(prev => [...prev, assetWithDefaults]);
 
       if (finalSymbol !== '') {
         const priceData = await priceService.fetchPrice(finalSymbol);
         if (priceData) {
-          setAssets(prevAssets => {
-            const updatedAssets = [...prevAssets];
-            const newAssetIndex = updatedAssets.length - 1;
-            if (updatedAssets[newAssetIndex]?.symbol === finalSymbol) {
-              updatedAssets[newAssetIndex] = {
-                ...updatedAssets[newAssetIndex],
-                currentPrice: priceData.price,
-                lastUpdated: priceData.timestamp,
-                priceSource: 'api'
-              };
-            }
-            return updatedAssets;
-          });
+          const assetWithPrice: Asset = {
+            ...assetWithDefaults,
+            currentPrice: priceData.price,
+            lastUpdated: priceData.timestamp,
+            priceSource: 'api'
+          };
+          setAssets(prev => [...prev, assetWithPrice]);
           setLastPriceUpdate(new Date().toISOString());
+        } else {
+          setAssets(prev => [...prev, assetWithDefaults]);
         }
+      } else {
+        setAssets(prev => [...prev, assetWithDefaults]);
       }
     } else if (field === 'symbol') {
       let finalSymbol = symbol;

@@ -183,7 +183,7 @@
     animation: slideUp 0.5s ease-out forwards;
     opacity: 0;
   }
-  
+
   .animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
   .animate-stagger > *:nth-child(2) { animation-delay: 50ms; }
   .animate-stagger > *:nth-child(3) { animation-delay: 100ms; }
@@ -192,6 +192,18 @@
   .animate-stagger > *:nth-child(6) { animation-delay: 250ms; }
   .animate-stagger > *:nth-child(7) { animation-delay: 300ms; }
   .animate-stagger > *:nth-child(8) { animation-delay: 350ms; }
+  .animate-stagger > *:nth-child(9) { animation-delay: 400ms; }
+  .animate-stagger > *:nth-child(10) { animation-delay: 450ms; }
+  .animate-stagger > *:nth-child(11) { animation-delay: 500ms; }
+  .animate-stagger > *:nth-child(12) { animation-delay: 550ms; }
+  .animate-stagger > *:nth-child(13) { animation-delay: 600ms; }
+  .animate-stagger > *:nth-child(14) { animation-delay: 650ms; }
+  .animate-stagger > *:nth-child(15) { animation-delay: 700ms; }
+  .animate-stagger > *:nth-child(16) { animation-delay: 750ms; }
+  .animate-stagger > *:nth-child(17) { animation-delay: 800ms; }
+  .animate-stagger > *:nth-child(18) { animation-delay: 850ms; }
+  .animate-stagger > *:nth-child(19) { animation-delay: 900ms; }
+  .animate-stagger > *:nth-child(20) { animation-delay: 950ms; }
   
   /* Custom scrollbar */
   ::-webkit-scrollbar {

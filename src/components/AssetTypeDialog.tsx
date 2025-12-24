@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import GlassCard from './GlassCard';
 import { cryptoAliases } from '../utils/cryptoAliases';
 
@@ -9,19 +9,59 @@ interface AssetTypeDialogProps {
   onCancel: () => void;
 }
 
-const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({ 
-  symbol, 
-  onSelectStock, 
+const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
+  symbol,
+  onSelectStock,
   onSelectCrypto,
-  onCancel 
+  onCancel
 }) => {
   const cryptoInfo = cryptoAliases[symbol.toUpperCase()];
   const hasCoinbase = cryptoInfo?.coinbase !== undefined;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLButtonElement>(null);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onCancel();
+      return;
+    }
+
+    if (e.key === 'Tab' && dialogRef.current) {
+      const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey && document.activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      } else if (!e.shiftKey && document.activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    }
+  }, [onCancel]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    firstFocusableRef.current?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="asset-type-dialog-title"
+      ref={dialogRef}
+    >
       <GlassCard variant="dark" padding="lg" className="max-w-md w-full">
-        <h3 className="text-xl font-semibold text-gray-100 mb-4">
+        <h3 id="asset-type-dialog-title" className="text-xl font-semibold text-gray-100 mb-4">
           Select Asset Type for {symbol.toUpperCase()}
         </h3>
         
@@ -31,6 +71,7 @@ const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
 
         <div className="space-y-3">
           <button
+            ref={firstFocusableRef}
             onClick={onSelectStock}
             className="w-full p-4 rounded-lg glass-light hover:bg-white/10 transition-all duration-200 text-left group"
           >

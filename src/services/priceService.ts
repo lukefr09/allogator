@@ -1,5 +1,36 @@
 import { TIMINGS } from '../constants';
 
+class FetchTimeoutError extends Error {
+  constructor(message: string = 'Request timed out') {
+    super(message);
+    this.name = 'FetchTimeoutError';
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = TIMINGS.FETCH_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new FetchTimeoutError();
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export interface PriceData {
   symbol: string;
   price: number;
@@ -103,7 +134,7 @@ class PriceService {
       
       try {
         this.lastRequestTime = Date.now();
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url);
         
         if (response.status === 429) {
           if (!this.useServerless && this.apiKeys.length > 1) {
