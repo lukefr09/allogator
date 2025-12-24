@@ -115,7 +115,7 @@ const AssetList: React.FC<AssetListProps> = ({
       <div className="space-y-4 animate-stagger overflow-visible">
         {assets.map((asset, index) => (
           <div
-            key={index}
+            key={asset.symbol}
             className={`group glass-light p-5 rounded-xl transition-all duration-300 border-b border-white/5 last:border-b-0 overflow-visible ${
               hoveredIndex === index ? 'scale-[1.01] shadow-lg' : ''
             }`}

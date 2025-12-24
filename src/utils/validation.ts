@@ -1,16 +1,15 @@
 import { Asset } from '../types';
+import { LIMITS, THRESHOLDS } from '../constants';
 
 export const validatePortfolio = (assets: Asset[], enableSelling: boolean = false): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
-  // Check minimum assets
-  if (assets.length < 2) {
-    errors.push('Portfolio must contain at least 2 assets');
+  if (assets.length < LIMITS.MIN_ASSETS) {
+    errors.push(`Portfolio must contain at least ${LIMITS.MIN_ASSETS} assets`);
   }
 
-  // Check maximum assets
-  if (assets.length > 20) {
-    errors.push('Portfolio cannot contain more than 20 assets');
+  if (assets.length > LIMITS.MAX_ASSETS) {
+    errors.push(`Portfolio cannot contain more than ${LIMITS.MAX_ASSETS} assets`);
   }
 
   // Check for duplicate symbols
@@ -48,11 +47,10 @@ export const validatePortfolio = (assets: Asset[], enableSelling: boolean = fals
     }
   }
 
-  // Check if percentages sum to 100%
   const totalPercentage = assets.reduce((sum, asset) => sum + asset.targetPercentage, 0);
   const percentageSum = totalPercentage * 100;
-  
-  if (Math.abs(percentageSum - 100) > 0.1) {
+
+  if (Math.abs(percentageSum - 100) > THRESHOLDS.PERCENTAGE_TOLERANCE) {
     errors.push(`Target percentages must sum to 100% (currently ${percentageSum.toFixed(1)}%)`);
   }
 

@@ -1,3 +1,5 @@
+import { TIMINGS } from '../constants';
+
 export interface PriceData {
   symbol: string;
   price: number;
@@ -13,14 +15,14 @@ export interface PriceServiceConfig {
 
 class PriceService {
   private cache: Map<string, { price: number; timestamp: string }> = new Map();
-  private cacheTimeout = 300000; // 5 minute cache (shorter since we have better rate limits)
+  private cacheTimeout = TIMINGS.PRICE_CACHE_MS;
   private apiKeys: string[];
   private currentKeyIndex = 0;
   private baseUrl: string;
   private useServerless: boolean;
-  private requestQueue: Promise<any> = Promise.resolve();
+  private requestQueue: Promise<PriceData | null> = Promise.resolve(null);
   private lastRequestTime = 0;
-  private minRequestInterval = 1100; // 1.1 seconds between requests to avoid rate limits
+  private minRequestInterval = TIMINGS.MIN_REQUEST_INTERVAL_MS;
   private pendingRequests: Map<string, Promise<PriceData | null>> = new Map();
   
   constructor(config: PriceServiceConfig) {
@@ -139,7 +141,11 @@ class PriceService {
         
         return { symbol, price, timestamp };
       } catch (error) {
-        // Failed to fetch price - return null
+        if (error instanceof Error) {
+          console.warn(`[PriceService] Failed to fetch price for ${symbol}:`, error.message);
+        } else {
+          console.warn(`[PriceService] Failed to fetch price for ${symbol}:`, error);
+        }
         return null;
       }
     });

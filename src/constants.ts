@@ -1,0 +1,25 @@
+export const LIMITS = {
+  MAX_ASSETS: 20,
+  MIN_ASSETS: 2,
+  MAX_PORTFOLIO_VALUE: 1_000_000_000,
+  MAX_SYMBOL_LENGTH: 30,
+} as const;
+
+export const PRECISION = {
+  SHARE_DECIMAL_PLACES: 6,
+  MONEY_DECIMAL_PLACES: 2,
+  SHARE_MULTIPLIER: 1_000_000,
+  MONEY_MULTIPLIER: 100,
+} as const;
+
+export const TIMINGS = {
+  PRICE_CACHE_MS: 300_000, // 5 minutes
+  MIN_REQUEST_INTERVAL_MS: 1_100, // Rate limit protection (60 calls/min)
+  INITIAL_PRICE_FETCH_DELAY_MS: 100,
+} as const;
+
+export const THRESHOLDS = {
+  ALLOCATION_ON_TARGET: 0.5,
+  ALLOCATION_SLIGHTLY_OFF: 2,
+  PERCENTAGE_TOLERANCE: 0.1,
+} as const;

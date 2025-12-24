@@ -1,18 +1,26 @@
 import { Asset, AllocationResult } from '../types';
 
+interface AllocationWorkingSet {
+  asset: Asset;
+  currentValue: number;
+  targetValue: number;
+  amountToAdd: number;
+  canSell: boolean;
+}
+
 export const calculateAllocations = (
-  assets: Asset[], 
+  assets: Asset[],
   newMoney: number,
   enableSelling: boolean = false
 ): AllocationResult[] => {
   const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
   const newTotal = currentTotal + newMoney;
-  
+
   // If selling mode is enabled, handle rebalancing with locked assets
   if (enableSelling) {
     // Step 1: Calculate what we can actually sell and what we need to buy
     let availableCash = newMoney;
-    const allocations: any[] = [];
+    const allocations: AllocationWorkingSet[] = [];
     
     // First pass: identify sells and buys
     assets.forEach(asset => {
