@@ -200,63 +200,65 @@ const AssetList: React.FC<AssetListProps> = memo(({
                       placeholder="AAPL"
                     />
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-0.5 min-h-[18px]">
                     {isLoadingPrices && !asset.currentPrice ? (
                       <Skeleton width="60px" height="12px" />
-                    ) : asset.currentPrice ? (
+                    ) : manualPriceIndex === index ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          defaultValue={asset.currentPrice || ''}
+                          className="input-dashed text-xs px-2 py-0.5 w-16"
+                          step="0.01"
+                          onWheel={preventNumberInputScroll}
+                          autoFocus
+                          onBlur={(e) => {
+                            const price = parseFloat(e.currentTarget.value);
+                            if (price > 0) {
+                              onUpdateAsset(index, 'currentPrice', price);
+                              onUpdateAsset(index, 'priceSource', 'manual');
+                              onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
+                            }
+                            setManualPriceIndex(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur();
+                            } else if (e.key === 'Escape') {
+                              setManualPriceIndex(null);
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => setManualPriceIndex(null)}
+                          className="text-xs px-1 transition-colors duration-200"
+                          style={{ color: 'var(--text-tertiary)' }}
+                          aria-label="Cancel price edit"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
                       <>
                         <span
                           className="text-xs transition-colors duration-200"
                           style={{ color: 'var(--text-tertiary)' }}
                         >
-                          {formatCurrency(asset.currentPrice)}
-                          {asset.priceSource === 'manual' && ' (manual)'}
+                          {asset.currentPrice ? formatCurrency(asset.currentPrice) : '—'}
+                          {asset.currentPrice && asset.priceSource === 'manual' && ' (manual)'}
                         </span>
-                        {manualPriceIndex === index ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              placeholder="Price"
-                              className="input-dashed text-xs px-2 py-0.5 w-16"
-                              step="0.01"
-                              onWheel={preventNumberInputScroll}
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  const price = parseFloat(e.currentTarget.value);
-                                  if (price > 0) {
-                                    onUpdateAsset(index, 'currentPrice', price);
-                                    onUpdateAsset(index, 'priceSource', 'manual');
-                                    onUpdateAsset(index, 'lastUpdated', new Date().toISOString());
-                                  }
-                                  setManualPriceIndex(null);
-                                } else if (e.key === 'Escape') {
-                                  setManualPriceIndex(null);
-                                }
-                              }}
-                            />
-                            <button
-                              onClick={() => setManualPriceIndex(null)}
-                              className="text-xs px-1 transition-colors duration-200"
-                              style={{ color: 'var(--text-tertiary)' }}
-                              aria-label="Cancel price edit"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setManualPriceIndex(index)}
-                            className="text-xs opacity-0 group-hover:opacity-100 transition-opacity px-1"
-                            style={{ color: 'var(--text-tertiary)' }}
-                            title="Set price manually"
-                            aria-label="Set price manually"
-                          >
-                            ✎
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setManualPriceIndex(index)}
+                          className={`text-xs transition-opacity px-1 ${asset.currentPrice ? 'opacity-0 group-hover:opacity-100' : 'opacity-50 hover:opacity-100'}`}
+                          style={{ color: 'var(--text-tertiary)' }}
+                          title="Set price manually"
+                          aria-label="Set price manually"
+                        >
+                          ✎
+                        </button>
                       </>
-                    ) : null}
+                    )}
                   </div>
                 </td>
 

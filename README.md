@@ -1,29 +1,32 @@
 # Allogator
 
-A portfolio rebalancing calculator with real-time price data integration.
+Portfolio rebalancing calculator. Runs in the browser, no account needed.
 
 **Live:** [allogator.xyz](https://allogator.xyz)
 
-## Overview
+## What it does
 
-Allogator calculates how to allocate new investments across your portfolio to maintain target percentages. It fetches live prices from Finnhub and runs entirely in the browser with no account required.
+You have a portfolio with target allocations (e.g., 60% VTI, 30% VXUS, 10% BND). You want to add $1,000. Allogator tells you exactly how much to put into each position to get as close to your targets as possible.
 
 ## Features
 
-- Real-time stock and cryptocurrency prices via Finnhub API
-- Buy-only or sell-enabled rebalancing modes
-- Asset locking to prevent selling specific holdings
-- Shareable portfolio URLs
-- Supports up to 20 assets per portfolio
+**Price fetching** — Enter a ticker symbol and prices are pulled automatically via Finnhub. Supports stocks and crypto. For unsupported tickers, click the pencil icon to enter a price manually.
 
-## Getting Started
+**Two input modes** — Enter holdings as dollar values or share counts. Toggle between them with the $/# switch.
 
-### Prerequisites
+**Buy-only mode** — Default mode. Only tells you what to buy with new money. Never suggests selling.
 
-- Node.js 16+
-- Finnhub API key ([free tier available](https://finnhub.io))
+**Sell-enabled mode** — Toggle "Allow selling" to rebalance by both buying and selling. The calculator determines the optimal trades to hit your targets exactly.
 
-### Installation
+**Asset locking** — In sell mode, lock specific assets to prevent them from being sold. Useful for tax lots you don't want to touch.
+
+**Shareable URLs** — Copy a link that preserves your portfolio setup. Useful for sharing or bookmarking.
+
+**Local only** — Everything runs in your browser. Nothing is sent to a server except price lookups.
+
+## Running locally
+
+Requires Node.js 16+ and a [Finnhub API key](https://finnhub.io) (free tier works).
 
 ```bash
 git clone https://github.com/lukefr09/allogator.git
@@ -31,56 +34,30 @@ cd allogator
 npm install
 ```
 
-Create a `.env` file:
-
+Create `.env`:
 ```
-VITE_FINNHUB_API_KEY=your_api_key_here
+VITE_FINNHUB_API_KEY=your_key
 ```
-
-### Development
 
 ```bash
-npm run dev      # Start dev server
-npm run build    # Production build
-npm run lint     # Run ESLint
-npm run format   # Format with Prettier
+npm run dev      # dev server
+npm run build    # production build
 ```
 
-## How It Works
+## How the algorithm works
 
-1. Add assets with their current values and target percentages
-2. Enter the amount you want to invest
-3. The algorithm calculates optimal allocation:
-   - Phase 1: Prioritizes underweight positions
-   - Phase 2: Distributes remaining funds proportionally
-   - Phase 3: Handles cent-level rounding
+1. Calculates current vs target allocation for each asset
+2. Prioritizes underweight positions first
+3. Distributes remaining funds proportionally to targets
+4. Rounds to the cent
 
-When selling mode is enabled, the calculator determines both buy and sell amounts to achieve target allocations. Assets can be locked to prevent selling.
+In sell mode, it calculates the net difference needed for each position and outputs both buy and sell amounts.
 
-## Project Structure
+## Limits
 
-```
-src/
-├── components/          # React components
-├── hooks/               # Custom React hooks
-│   ├── usePortfolio.ts  # Portfolio state and operations
-│   └── useGradientAnimation.ts
-├── services/
-│   └── priceService.ts  # Finnhub API client with caching
-├── utils/
-│   ├── calculations.ts  # Rebalancing algorithm
-│   ├── validation.ts    # Input validation
-│   └── urlSharing.ts    # Portfolio URL encoding
-├── constants.ts         # Configuration constants
-├── types.ts             # TypeScript interfaces
-└── App.tsx              # Main application
-```
-
-## API Rate Limits
-
-- Finnhub free tier: 60 calls/minute
-- Built-in rate limiting: 1.1 seconds between requests
-- Price caching: 5 minutes per symbol
+- 20 assets max per portfolio
+- Finnhub free tier: 60 API calls/minute
+- Prices cached for 5 minutes
 
 ## License
 
