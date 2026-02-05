@@ -48,15 +48,24 @@ export function useGradientAnimation(allocations: AllocationResult[]): RGB {
   }, [allocations]);
 
   useEffect(() => {
+    let isAnimating = true;
+
     const animate = () => {
+      if (!isAnimating) return;
+
       setGradientColor(current => {
         const dr = targetColor.r - current.r;
         const dg = targetColor.g - current.g;
         const db = targetColor.b - current.b;
 
+        // Stop animation when target is reached
         if (Math.abs(dr) < 1 && Math.abs(dg) < 1 && Math.abs(db) < 1) {
+          isAnimating = false;
           return targetColor;
         }
+
+        // Continue animation
+        animationFrameRef.current = requestAnimationFrame(animate);
 
         return {
           r: current.r + dr * 0.02,
@@ -64,13 +73,12 @@ export function useGradientAnimation(allocations: AllocationResult[]): RGB {
           b: current.b + db * 0.02
         };
       });
-
-      animationFrameRef.current = requestAnimationFrame(animate);
     };
 
     animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
+      isAnimating = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
