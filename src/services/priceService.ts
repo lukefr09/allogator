@@ -144,11 +144,11 @@ class PriceService {
             this.pendingRequests.delete(symbol);
             return this.fetchPrice(symbol, retryCount + 1);
           }
-          throw new Error('Price API temporarily at capacity. Please enter prices manually or try again in a few minutes.');
+          throw new Error('Price API temporarily at capacity. Please try again in a few minutes.');
         }
         
         if (response.status >= 500) {
-          throw new Error('Price API temporarily unavailable. Please enter prices manually or try again in a few minutes.');
+          throw new Error('Price API temporarily unavailable. Please try again in a few minutes.');
         }
         
         if (!response.ok) {

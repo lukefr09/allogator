@@ -4,51 +4,55 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
-        'navy': {
-          900: '#0a0f1c',
-          800: '#0f1829',
-          700: '#142236',
-        },
-        'glass': {
-          light: 'rgba(255, 255, 255, 0.1)',
-          lighter: 'rgba(255, 255, 255, 0.08)',
-          lightest: 'rgba(255, 255, 255, 0.05)',
-          border: 'rgba(255, 255, 255, 0.1)',
-        }
+        // Light theme colors (used directly with CSS variables)
+        'bg': 'var(--bg)',
+        'bg-subtle': 'var(--bg-subtle)',
+        'text-primary': 'var(--text)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-tertiary': 'var(--text-tertiary)',
+        'rule': 'var(--rule)',
+        'rule-strong': 'var(--rule-strong)',
+        'accent': 'var(--accent)',
+        'accent-hover': 'var(--accent-hover)',
+        'positive': 'var(--positive)',
+        'negative': 'var(--negative)',
+        'warning': 'var(--warning)',
+        'input-bg': 'var(--input-bg)',
+        'input-border': 'var(--input-border)',
+        'input-focus': 'var(--input-focus)',
       },
       fontFamily: {
-        'sans': ['Satoshi', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        'serif': ['Instrument Serif', 'Georgia', 'serif'],
+        'sans': ['DM Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+      },
+      fontSize: {
+        'logo': '26px',
+        'section-title': '22px',
+        'section-title-sm': '18px',
+        'data': '15px',
+        'label': '12px',
+        'meta': '11px',
       },
       animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'glow': 'glow 2s ease-in-out infinite',
-        'float': 'float 6s ease-in-out infinite',
+        'fade-up': 'fadeUp 0.4s ease both',
+        'fade-in': 'fadeIn 0.3s ease both',
       },
       keyframes: {
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        glow: {
-          '0%, 100%': { opacity: '0.5' },
-          '50%': { opacity: '1' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
-        },
       },
-      backdropBlur: {
-        xs: '2px',
+      borderRadius: {
+        'sm': '2px',
       },
     },
   },

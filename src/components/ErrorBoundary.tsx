@@ -1,5 +1,4 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import GlassCard from './GlassCard';
 
 interface Props {
   children: ReactNode;
@@ -35,11 +34,21 @@ class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-navy-900 flex items-center justify-center p-4">
-          <GlassCard variant="dark" padding="lg" className="max-w-md w-full text-center">
+        <div
+          className="min-h-screen flex items-center justify-center p-4"
+          style={{ backgroundColor: 'var(--bg)' }}
+        >
+          <div
+            className="max-w-md w-full text-center p-8 rounded-sm"
+            style={{
+              backgroundColor: 'var(--bg)',
+              border: '1px solid var(--rule)'
+            }}
+          >
             <div className="mb-4">
               <svg
-                className="w-16 h-16 mx-auto text-red-400"
+                className="w-16 h-16 mx-auto"
+                style={{ color: 'var(--negative)' }}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -52,30 +61,44 @@ class ErrorBoundary extends Component<Props, State> {
                 />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold text-gray-100 mb-2">Something went wrong</h1>
-            <p className="text-gray-400 mb-6">
+            <h1 className="section-title-sm mb-2">Something went wrong</h1>
+            <p
+              className="text-sm mb-6 transition-colors duration-200"
+              style={{ color: 'var(--text-secondary)' }}
+            >
               An unexpected error occurred. Your portfolio data is safe in the URL.
             </p>
             {this.state.error && (
-              <p className="text-xs text-gray-500 mb-4 font-mono bg-gray-800/50 p-2 rounded overflow-auto max-h-24">
+              <p
+                className="text-xs mb-4 font-mono p-2 rounded-sm overflow-auto max-h-24"
+                style={{
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-tertiary)'
+                }}
+              >
                 {this.state.error.message}
               </p>
             )}
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.handleReset}
-                className="px-4 py-2 rounded-lg glass-light hover:bg-white/10 transition-colors text-gray-300"
+                className="btn-outline"
               >
                 Try Again
               </button>
               <button
                 onClick={this.handleReload}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors text-white"
+                className="btn-outline"
+                style={{
+                  backgroundColor: 'var(--text)',
+                  color: 'var(--bg)',
+                  borderColor: 'var(--text)'
+                }}
               >
                 Reload Page
               </button>
             </div>
-          </GlassCard>
+          </div>
         </div>
       );
     }

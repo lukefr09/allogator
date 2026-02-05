@@ -1,35 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Preconnect to font domains for faster loading -->
-    <link rel="preconnect" href="https://api.fontshare.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Load fonts with font-display: swap for better performance -->
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet">
-    <title>Allogator - Smart Investing Made Simple</title>
+    <!-- Load Instrument Serif (headings) and DM Sans (body) -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+    <title>Allogator — Portfolio Rebalancer</title>
     <meta name="description" content="Optimize your investment portfolio with precision. Calculate exact allocation amounts to maintain your target percentages." />
     <!-- Critical CSS to prevent layout shifts -->
     <style>
-      #root{min-height:100vh;background:#0f172a}
-      .glass{backdrop-filter:blur(12px);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
-      .skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.1),rgba(255,255,255,0.2),rgba(255,255,255,0.1));background-size:200% 100%;animation:shimmer 1.5s infinite}
-      @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+      :root {
+        --bg: #FAFAF7;
+        --text: #1A1A18;
+      }
+      [data-theme="dark"] {
+        --bg: #1C1B19;
+        --text: #E8E6DF;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        font-family: 'DM Sans', -apple-system, sans-serif;
+      }
+      #root {
+        min-height: 100vh;
+      }
+      .skeleton {
+        background: linear-gradient(90deg, rgba(0,0,0,0.05), rgba(0,0,0,0.1), rgba(0,0,0,0.05));
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+      [data-theme="dark"] .skeleton {
+        background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        background-size: 200% 100%;
+      }
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
     </style>
-    <meta property="og:title" content="Allogator - Smart Investing Made Simple" />
+    <meta property="og:title" content="Allogator — Portfolio Rebalancer" />
     <meta property="og:description" content="Optimize your investment portfolio with precision. Calculate exact allocation amounts to maintain your target percentages." />
     <meta property="og:type" content="website" />
   </head>
   <body>
     <script>
-      // Prevent flash of wrong theme on page load
+      // Theme: respect system preference, allow override
       (function() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-          document.documentElement.classList.add('light');
+        const saved = localStorage.getItem('allogator-theme');
+        if (saved) {
+          document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
         }
       })();
     </script>

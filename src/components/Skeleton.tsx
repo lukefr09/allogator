@@ -15,22 +15,20 @@ const Skeleton: React.FC<SkeletonProps> = ({
   height,
   animate = true
 }) => {
-  const baseClasses = `bg-gray-700/50 ${animate ? 'animate-pulse' : ''}`;
-  
   const variantClasses = {
-    text: 'rounded',
-    rectangular: 'rounded-lg',
+    text: 'rounded-sm',
+    rectangular: 'rounded-sm',
     circular: 'rounded-full'
   };
-  
+
   const style: React.CSSProperties = {
     width: width || '100%',
     height: height || (variant === 'text' ? '1em' : '100%')
   };
-  
+
   return (
-    <div 
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+    <div
+      className={`skeleton ${animate ? '' : ''} ${variantClasses[variant]} ${className}`}
       style={style}
     />
   );

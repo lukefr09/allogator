@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-import GlassCard from './GlassCard';
 import { cryptoAliases } from '../utils/cryptoAliases';
 
 interface AssetTypeDialogProps {
@@ -54,37 +53,60 @@ const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="asset-type-dialog-title"
       ref={dialogRef}
     >
-      <GlassCard variant="dark" padding="lg" className="max-w-md w-full">
-        <h3 id="asset-type-dialog-title" className="text-xl font-semibold text-gray-100 mb-4">
+      <div
+        className="max-w-md w-full p-6 rounded-sm transition-colors duration-200"
+        style={{
+          backgroundColor: 'var(--bg)',
+          border: '1px solid var(--rule)'
+        }}
+      >
+        <h3
+          id="asset-type-dialog-title"
+          className="section-title-sm mb-4"
+        >
           Select Asset Type for {symbol.toUpperCase()}
         </h3>
-        
-        <p className="text-gray-400 mb-6">
+
+        <p
+          className="text-sm mb-6 transition-colors duration-200"
+          style={{ color: 'var(--text-secondary)' }}
+        >
           This symbol could be either a stock or cryptocurrency. Please select which one you meant:
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <button
             ref={firstFocusableRef}
             onClick={onSelectStock}
-            className="w-full p-4 rounded-lg glass-light hover:bg-white/10 transition-all duration-200 text-left group"
+            className="w-full p-4 text-left rounded-sm border transition-all duration-200 hover:bg-[var(--bg-subtle)] group"
+            style={{ borderColor: 'var(--rule)' }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-gray-100 group-hover:text-white">
+                <h4 className="font-medium">
                   Stock ({symbol.toUpperCase()})
                 </h4>
-                <p className="text-sm text-gray-400 mt-1">
+                <p
+                  className="text-sm mt-1 transition-colors duration-200"
+                  style={{ color: 'var(--text-tertiary)' }}
+                >
                   Trade as a traditional stock/ETF
                 </p>
               </div>
-              <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg
+                className="w-5 h-5 transition-colors duration-200"
+                style={{ color: 'var(--text-tertiary)' }}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
@@ -94,18 +116,28 @@ const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
             <>
               <button
                 onClick={() => onSelectCrypto('binance')}
-                className="w-full p-4 rounded-lg glass-light hover:bg-white/10 transition-all duration-200 text-left group"
+                className="w-full p-4 text-left rounded-sm border transition-all duration-200 hover:bg-[var(--bg-subtle)] group"
+                style={{ borderColor: 'var(--rule)' }}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-100 group-hover:text-white">
+                    <h4 className="font-medium">
                       {cryptoInfo.name} on Binance
                     </h4>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p
+                      className="text-sm mt-1 transition-colors duration-200"
+                      style={{ color: 'var(--text-tertiary)' }}
+                    >
                       Trade as cryptocurrency on Binance exchange
                     </p>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="w-5 h-5 transition-colors duration-200"
+                    style={{ color: 'var(--text-tertiary)' }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -114,18 +146,28 @@ const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
               {hasCoinbase && (
                 <button
                   onClick={() => onSelectCrypto('coinbase')}
-                  className="w-full p-4 rounded-lg glass-light hover:bg-white/10 transition-all duration-200 text-left group"
+                  className="w-full p-4 text-left rounded-sm border transition-all duration-200 hover:bg-[var(--bg-subtle)] group"
+                  style={{ borderColor: 'var(--rule)' }}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-medium text-gray-100 group-hover:text-white">
+                      <h4 className="font-medium">
                         {cryptoInfo.name} on Coinbase
                       </h4>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p
+                        className="text-sm mt-1 transition-colors duration-200"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
                         Trade as cryptocurrency on Coinbase exchange
                       </p>
                     </div>
-                    <svg className="w-5 h-5 text-gray-400 group-hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg
+                      className="w-5 h-5 transition-colors duration-200"
+                      style={{ color: 'var(--text-tertiary)' }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -137,11 +179,11 @@ const AssetTypeDialog: React.FC<AssetTypeDialogProps> = ({
 
         <button
           onClick={onCancel}
-          className="mt-6 w-full py-3 rounded-lg glass-light hover:bg-white/10 transition-all duration-200 text-gray-400 hover:text-gray-300"
+          className="btn-outline w-full mt-6"
         >
           Cancel
         </button>
-      </GlassCard>
+      </div>
     </div>
   );
 };

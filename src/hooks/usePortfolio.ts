@@ -163,13 +163,13 @@ export function usePortfolio(): UsePortfolioReturn {
 
       const failedSymbols = symbols.filter(symbol => !priceData.get(symbol));
       if (failedSymbols.length > 0) {
-        setPriceError(`Unable to fetch prices for: ${failedSymbols.join(', ')}. Enter prices manually.`);
+        setPriceError(`Unable to fetch prices for: ${failedSymbols.join(', ')}.`);
       }
 
       setAssets(updatedAssets);
       setLastPriceUpdate(new Date().toISOString());
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unable to fetch prices. Please enter them manually.';
+      const errorMessage = error instanceof Error ? error.message : 'Unable to fetch prices.';
       setPriceError(errorMessage);
       console.error('Price fetch error:', error);
     } finally {

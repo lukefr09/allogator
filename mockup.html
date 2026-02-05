@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allogator — Portfolio Rebalancer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* ══════════════════════════════════════════════
+     DESIGN TOKENS
+     
+     Two themes: light + dark. Respects prefers-color-scheme
+     by default, user can override via toggle.
+     
+     Fonts:
+       Headings: Instrument Serif (serif)
+       Body/Data: DM Sans (sans-serif)
+     
+     Accent: Amber/orange — used ONLY for monetary amounts
+     Green/Yellow/Red: Reserved for allocation status indicators
+  ══════════════════════════════════════════════ */
+
+  [data-theme="light"] {
+    --bg:             #FAFAF7;
+    --bg-subtle:      #F3F2EE;
+    --text:           #1A1A18;
+    --text-secondary: #7A7A72;
+    --text-tertiary:  #A8A89E;
+    --rule:           #E2E1DB;
+    --rule-strong:    #C8C7C0;
+    --accent:         #B45309;
+    --accent-hover:   #92400E;
+    --positive:       #15803D;
+    --negative:       #B91C1C;
+    --warning:        #A16207;
+    --input-bg:       #FFFFFF;
+    --input-border:   #D4D3CC;
+    --input-focus:    #1A1A18;
+    --error-bg:       #FEF2F2;
+    --error-border:   #FECACA;
+    --error-text:     #991B1B;
+    --success-bg:     #F0FDF4;
+    --success-border: #BBF7D0;
+    --success-text:   #166534;
+  }
+
+  [data-theme="dark"] {
+    --bg:             #1C1B19;
+    --bg-subtle:      #252420;
+    --text:           #E8E6DF;
+    --text-secondary: #9C9A90;
+    --text-tertiary:  #6B6960;
+    --rule:           #333129;
+    --rule-strong:    #44423A;
+    --accent:         #D97706;
+    --accent-hover:   #F59E0B;
+    --positive:       #4ADE80;
+    --negative:       #F87171;
+    --warning:        #FBBF24;
+    --input-bg:       #252420;
+    --input-border:   #44423A;
+    --input-focus:    #E8E6DF;
+    --error-bg:       #2D1B1B;
+    --error-border:   #5C2626;
+    --error-text:     #F87171;
+    --success-bg:     #1B2D1F;
+    --success-border: #265C33;
+    --success-text:   #4ADE80;
+  }
+
+  /* ══════════════════════════════════════════════
+     RESET & BASE
+  ══════════════════════════════════════════════ */
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+
+  /* ══════════════════════════════════════════════
+     HEADER
+  ══════════════════════════════════════════════ */
+
+  header {
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 0.25s;
+  }
+
+  .logo-group {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .logo-mark {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    transition: color 0.25s;
+  }
+
+  .logo-subtitle {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 400;
+    transition: color 0.25s;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  /* ── Invest Input ── */
+  .invest-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .field-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    transition: color 0.25s;
+  }
+
+  .invest-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .invest-input-wrap .dollar-sign {
+    position: absolute;
+    left: 12px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    pointer-events: none;
+    transition: color 0.25s;
+  }
+
+  .invest-input {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 8px 14px 8px 26px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    width: 130px;
+    border-radius: 2px;
+    outline: none;
+    transition: all 0.15s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .invest-input:focus { border-color: var(--input-focus); }
+
+  /* ── Sell Toggle ── */
+  .sell-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-track {
+    width: 36px;
+    height: 20px;
+    background: var(--rule-strong);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+  }
+
+  .toggle-track.active { background: var(--accent); }
+
+  .toggle-knob {
+    width: 16px;
+    height: 16px;
+    background: var(--bg);
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s, background 0.25s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  .toggle-track.active .toggle-knob { transform: translateX(16px); }
+
+  /* ── Theme Toggle (sun/moon) ── */
+  .theme-toggle-btn {
+    background: none;
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    width: 34px;
+    height: 34px;
+  }
+
+  .theme-toggle-btn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text);
+  }
+
+  .theme-toggle-btn svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+  }
+
+  .theme-toggle-btn:hover svg {
+    transform: rotate(15deg);
+  }
+
+  .icon-sun, .icon-moon { display: none; }
+  [data-theme="light"] .icon-sun { display: block; }
+  [data-theme="dark"] .icon-moon { display: block; }
+
+  /* ══════════════════════════════════════════════
+     MAIN LAYOUT
+  ══════════════════════════════════════════════ */
+
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 48px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 64px;
+    align-items: start;
+  }
+
+  /* ══════════════════════════════════════════════
+     SECTION HEADINGS
+     
+     Pattern: serif title + 2px bottom border.
+     Use var(--text) border for neutral sections,
+     var(--accent) border for monetary sections.
+  ══════════════════════════════════════════════ */
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--text);
+    transition: border-color 0.25s;
+  }
+
+  .section-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .section-meta {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: color 0.25s;
+  }
+
+  .section-meta span { font-variant-numeric: tabular-nums; }
+
+  .total-badge {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--positive);
+    border: 1px solid var(--positive);
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.02em;
+    transition: all 0.25s;
+  }
+
+  .total-badge.over {
+    color: var(--negative);
+    border-color: var(--negative);
+  }
+
+  .portfolio-value {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.25s;
+  }
+
+  .view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+    transition: border-color 0.25s;
+  }
+
+  .view-toggle button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 4px 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .view-toggle button.active {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  .view-toggle button:not(:last-child) {
+    border-right: 1px solid var(--rule);
+  }
+
+  /* ══════════════════════════════════════════════
+     POSITIONS TABLE
+     
+     Flat table — no card wrappers. Rows separated
+     by thin horizontal rules. Inputs appear as plain
+     text until hover/focus.
+  ══════════════════════════════════════════════ */
+
+  .positions-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .positions-table thead th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-align: left;
+    padding: 0 0 10px 0;
+    transition: color 0.25s;
+  }
+
+  .positions-table thead th:nth-child(n+2) { text-align: right; }
+  .positions-table thead th:nth-child(2) { text-align: left; padding-left: 16px; }
+
+  .positions-table tbody tr {
+    border-top: 1px solid var(--rule);
+    transition: border-color 0.25s;
+  }
+
+  .positions-table tbody tr:hover {
+    background: var(--bg-subtle);
+  }
+
+  .positions-table tbody td {
+    padding: 14px 0;
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+    transition: background 0.15s;
+  }
+
+  .positions-table tbody td:nth-child(n+2) { text-align: right; }
+  .positions-table tbody td:nth-child(2) { text-align: left; padding-left: 16px; }
+
+  .symbol-cell {
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+
+  .symbol-price {
+    display: block;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    margin-top: 2px;
+    letter-spacing: 0;
+    transition: color 0.25s;
+  }
+
+  /* Editable inputs that look like text until interaction */
+  .editable-value {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 6px 10px;
+    text-align: right;
+    color: var(--text);
+    width: 100px;
+    border-radius: 2px;
+    outline: none;
+    transition: all 0.15s;
+  }
+
+  .editable-value:hover {
+    border-color: var(--rule);
+    background: var(--input-bg);
+  }
+
+  .editable-value:focus {
+    border-color: var(--input-focus);
+    background: var(--input-bg);
+  }
+
+  .current-alloc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    transition: color 0.25s;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+
+  .positions-table tbody tr:hover .remove-btn {
+    opacity: 0.5;
+  }
+
+  .remove-btn:hover {
+    opacity: 1 !important;
+    color: var(--negative);
+  }
+
+  /* ── Add Position Row ── */
+  .add-row {
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.25s;
+  }
+
+  .add-input {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px dashed var(--rule-strong);
+    background: transparent;
+    color: var(--text);
+    border-radius: 2px;
+    outline: none;
+    transition: all 0.15s;
+    width: 120px;
+  }
+
+  .add-input::placeholder {
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  .add-input:focus {
+    border-style: solid;
+    border-color: var(--input-focus);
+    background: var(--input-bg);
+  }
+
+  .add-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 16px;
+    border: 1px solid var(--text);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .add-btn:hover {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  .positions-count {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-left: auto;
+    transition: color 0.25s;
+  }
+
+  /* ══════════════════════════════════════════════
+     BANNER MESSAGES (errors, warnings, info)
+     
+     Sits above the positions table. No border-radius,
+     uses left border accent for type indication.
+  ══════════════════════════════════════════════ */
+
+  .banner {
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    border-left: 3px solid;
+    transition: all 0.25s;
+  }
+
+  .banner-error {
+    background: var(--error-bg);
+    border-color: var(--negative);
+    color: var(--error-text);
+  }
+
+  .banner-success {
+    background: var(--success-bg);
+    border-color: var(--positive);
+    color: var(--success-text);
+  }
+
+  .banner code {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  /* ══════════════════════════════════════════════
+     RIGHT COLUMN — ALLOCATE + RESULT
+  ══════════════════════════════════════════════ */
+
+  .right-col {
+    position: sticky;
+    top: 40px;
+  }
+
+  /* ── Allocate ── */
+  .allocate-section { margin-bottom: 40px; }
+
+  .allocate-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 16px;
+    transition: border-color 0.25s;
+  }
+
+  .allocate-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 18px;
+    font-weight: 400;
+  }
+
+  .allocate-amount {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 22px;
+    color: var(--accent);
+    font-style: italic;
+    transition: color 0.25s;
+  }
+
+  .allocate-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 0.25s;
+  }
+
+  .allocate-symbol {
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    transition: color 0.25s;
+  }
+
+  .allocate-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--accent);
+    transition: color 0.25s;
+  }
+
+  /* Sell mode: show negative values in red */
+  .allocate-value.sell {
+    color: var(--negative);
+  }
+
+  .allocate-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 0 0;
+  }
+
+  .allocate-total .allocate-symbol {
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+  }
+
+  .allocate-total .allocate-value { font-size: 16px; }
+
+  /* ── Result ── */
+  .result-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--text);
+    margin-bottom: 4px;
+    transition: border-color 0.25s;
+  }
+
+  .result-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 18px;
+    font-weight: 400;
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text);
+  }
+
+  .result-legend {
+    display: flex;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 4px;
+    transition: border-color 0.25s;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transition: color 0.25s;
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transition: background 0.25s;
+  }
+
+  .legend-dot.on-target { background: var(--positive); }
+  .legend-dot.close { background: var(--warning); }
+  .legend-dot.off { background: var(--negative); }
+
+  .result-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    transition: border-color 0.25s;
+  }
+
+  .result-symbol-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .result-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.25s;
+  }
+
+  .result-symbol {
+    font-weight: 400;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .result-right { text-align: right; }
+
+  .result-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    font-size: 15px;
+  }
+
+  .result-drift {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    margin-top: 1px;
+    transition: color 0.25s;
+  }
+
+  .result-drift .arrow { margin: 0 2px; }
+  .drift-ok { color: var(--positive); transition: color 0.25s; }
+  .drift-warn { color: var(--warning); transition: color 0.25s; }
+  .drift-off { color: var(--negative); transition: color 0.25s; }
+
+  .result-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 0 0;
+  }
+
+  .result-total-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    transition: color 0.25s;
+  }
+
+  .result-total-value {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ══════════════════════════════════════════════
+     FOOTER
+  ══════════════════════════════════════════════ */
+
+  footer {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 48px 40px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    transition: border-color 0.25s;
+  }
+
+  .footer-left {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    transition: color 0.25s;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 20px;
+  }
+
+  .footer-links a {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    text-decoration: none;
+    transition: color 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  /* ══════════════════════════════════════════════
+     ANIMATIONS
+  ══════════════════════════════════════════════ */
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .left-col { animation: fadeUp 0.4s ease both; }
+  .right-col { animation: fadeUp 0.4s ease 0.1s both; }
+
+  .positions-table tbody tr { animation: fadeUp 0.35s ease both; }
+  .positions-table tbody tr:nth-child(1) { animation-delay: 0.15s; }
+  .positions-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+  .positions-table tbody tr:nth-child(3) { animation-delay: 0.25s; }
+
+  /* ══════════════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════════════ */
+
+  @media (max-width: 860px) {
+    header {
+      padding: 16px 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-controls {
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    main {
+      padding: 24px 20px;
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .right-col {
+      position: static;
+    }
+
+    footer {
+      padding: 20px 20px 32px;
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .logo-subtitle { display: none; }
+
+    .invest-input { width: 100px; }
+
+    .positions-table thead th:nth-child(4),
+    .positions-table tbody td:nth-child(4) {
+      display: none;
+    }
+
+    .editable-value { width: 80px; padding: 6px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-group">
+    <span class="logo-mark">Allogator</span>
+    <span class="logo-subtitle">Portfolio Rebalancer</span>
+  </div>
+  <div class="header-controls">
+    <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+      <!-- Sun icon (shown in light mode → click to go dark) -->
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <!-- Moon icon (shown in dark mode → click to go light) -->
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <div class="invest-group">
+      <span class="field-label">Invest</span>
+      <div class="invest-input-wrap">
+        <span class="dollar-sign">$</span>
+        <input type="text" class="invest-input" value="1,000" />
+      </div>
+    </div>
+    <div class="sell-toggle" onclick="this.querySelector('.toggle-track').classList.toggle('active')">
+      <span class="field-label">Selling</span>
+      <div class="toggle-track">
+        <div class="toggle-knob"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="left-col">
+    <!-- Error banner example — hidden by default, shown when price fetch fails -->
+    <div class="banner banner-error" id="errorBanner">
+      Unable to fetch prices for VOO, QQQ, NVDA. <code>Enter prices manually.</code>
+    </div>
+
+    <div class="section-head">
+      <div>
+        <span class="section-title">Positions</span>
+        <span class="portfolio-value" style="margin-left: 16px;">$1,000.00</span>
+      </div>
+      <div class="section-meta">
+        <span>9:52 pm</span>
+        <span class="total-badge">100.0%</span>
+        <div class="view-toggle">
+          <button class="active" onclick="setView(this)">$</button>
+          <button onclick="setView(this)">#</button>
+        </div>
+      </div>
+    </div>
+
+    <table class="positions-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Value</th>
+          <th>Target</th>
+          <th>Current</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="symbol-cell">VOO <span class="symbol-price">$630.91</span></td>
+          <td><input type="text" class="editable-value" value="$600" /></td>
+          <td><input type="text" class="editable-value" value="50.0%" /></td>
+          <td class="current-alloc">60.0%</td>
+          <td><button class="remove-btn">×</button></td>
+        </tr>
+        <tr>
+          <td class="symbol-cell">QQQ <span class="symbol-price">$605.75</span></td>
+          <td><input type="text" class="editable-value" value="$300" /></td>
+          <td><input type="text" class="editable-value" value="30.0%" /></td>
+          <td class="current-alloc">30.0%</td>
+          <td><button class="remove-btn">×</button></td>
+        </tr>
+        <tr>
+          <td class="symbol-cell">NVDA <span class="symbol-price">$131.24</span></td>
+          <td><input type="text" class="editable-value" value="$100" /></td>
+          <td><input type="text" class="editable-value" value="20.0%" /></td>
+          <td class="current-alloc">10.0%</td>
+          <td><button class="remove-btn">×</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="add-row">
+      <input type="text" class="add-input" placeholder="Symbol" />
+      <input type="text" class="add-input" placeholder="Target %" style="width: 90px;" />
+      <button class="add-btn">Add</button>
+      <span class="positions-count">3 / 20</span>
+    </div>
+  </div>
+
+  <div class="right-col">
+    <div class="allocate-section">
+      <div class="allocate-head">
+        <span class="allocate-title">Allocate</span>
+        <span class="allocate-amount">$1,000</span>
+      </div>
+      <div class="allocate-row">
+        <span class="allocate-symbol">VOO</span>
+        <span class="allocate-value">$400.00</span>
+      </div>
+      <div class="allocate-row">
+        <span class="allocate-symbol">QQQ</span>
+        <span class="allocate-value">$300.00</span>
+      </div>
+      <div class="allocate-row">
+        <span class="allocate-symbol">NVDA</span>
+        <span class="allocate-value">$300.00</span>
+      </div>
+      <div class="allocate-total">
+        <span class="allocate-symbol">Total</span>
+        <span class="allocate-value">$1,000.00</span>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-head">
+        <span class="result-title">Result</span>
+        <button class="copy-btn">Copy</button>
+      </div>
+      <div class="result-legend">
+        <span class="legend-item"><span class="legend-dot on-target"></span> On target</span>
+        <span class="legend-item"><span class="legend-dot close"></span> Close</span>
+        <span class="legend-item"><span class="legend-dot off"></span> Off</span>
+      </div>
+      <div class="result-row">
+        <div class="result-symbol-group">
+          <span class="result-dot" style="background: var(--positive);"></span>
+          <span class="result-symbol">VOO</span>
+        </div>
+        <div class="result-right">
+          <div class="result-value">$1,000.00</div>
+          <div class="result-drift">60.0% <span class="arrow">→</span> 50.0% <span class="drift-ok">(0.0%)</span></div>
+        </div>
+      </div>
+      <div class="result-row">
+        <div class="result-symbol-group">
+          <span class="result-dot" style="background: var(--positive);"></span>
+          <span class="result-symbol">QQQ</span>
+        </div>
+        <div class="result-right">
+          <div class="result-value">$600.00</div>
+          <div class="result-drift">30.0% <span class="arrow">→</span> 30.0% <span class="drift-ok">(0.0%)</span></div>
+        </div>
+      </div>
+      <div class="result-row">
+        <div class="result-symbol-group">
+          <span class="result-dot" style="background: var(--warning);"></span>
+          <span class="result-symbol">NVDA</span>
+        </div>
+        <div class="result-right">
+          <div class="result-value">$400.00</div>
+          <div class="result-drift">10.0% <span class="arrow">→</span> 20.0% <span class="drift-warn">(+2.1%)</span></div>
+        </div>
+      </div>
+      <div class="result-total-row">
+        <span class="result-total-label">New Total</span>
+        <span class="result-total-value">$2,000.00</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span class="footer-left">All calculations run locally. No data leaves your browser.</span>
+  <div class="footer-links">
+    <a href="#">Share Portfolio</a>
+    <a href="#">GitHub</a>
+  </div>
+</footer>
+
+<script>
+  // ── Theme: respect system preference, allow override ──
+  (function() {
+    const saved = localStorage.getItem('allogator-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('allogator-theme', next);
+  }
+
+  // ── View toggle ($/#) ──
+  function setView(btn) {
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
