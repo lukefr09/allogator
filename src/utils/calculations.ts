@@ -78,14 +78,15 @@ export const calculateAllocations = (
       }
       
       const newValue = currentValue + finalAmount;
-      
+      const newPercentage = newTotal > 0 ? (newValue / newTotal) * 100 : 0;
+
       return {
         symbol: asset.symbol,
         amountToAdd: parseFloat(finalAmount.toFixed(2)),
         newValue: parseFloat(newValue.toFixed(2)),
-        newPercentage: (newValue / newTotal) * 100,
+        newPercentage,
         targetPercentage: asset.targetPercentage * 100,
-        difference: (newValue / newTotal) * 100 - (asset.targetPercentage * 100)
+        difference: newPercentage - (asset.targetPercentage * 100)
       };
     });
   }
@@ -109,11 +110,13 @@ export const calculateAllocations = (
     const needed = Math.max(0, targetValue - currentValueCents);
     const toAllocate = Math.min(needed, remainingMoney);
     
+    const newValueCents = currentValueCents + toAllocate;
+    const newTotalCents = newTotal * 100;
     results[index] = {
       symbol: asset.symbol,
       amountToAdd: parseFloat((toAllocate / 100).toFixed(2)),
       newValue: parseFloat((asset.currentValue + (toAllocate / 100)).toFixed(2)),
-      newPercentage: ((currentValueCents + toAllocate) / (newTotal * 100)) * 100,
+      newPercentage: newTotalCents > 0 ? (newValueCents / newTotalCents) * 100 : 0,
       targetPercentage,
       difference: 0
     };
@@ -149,7 +152,7 @@ export const calculateAllocations = (
   // Calculate final values and differences
   results.forEach((result, index) => {
     result.newValue = parseFloat((assets[index].currentValue + result.amountToAdd).toFixed(2));
-    result.newPercentage = (result.newValue / newTotal) * 100;
+    result.newPercentage = newTotal > 0 ? (result.newValue / newTotal) * 100 : 0;
     result.difference = result.newPercentage - result.targetPercentage;
   });
   
