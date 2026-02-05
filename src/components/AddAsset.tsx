@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Asset } from '../types';
+import { LIMITS } from '../constants';
 import GlassCard from './GlassCard';
 import { preventNumberInputScroll } from '../utils/preventNumberScroll';
 
@@ -18,7 +19,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (currentAssetsCount >= 20) {
+    if (currentAssetsCount >= LIMITS.MAX_ASSETS) {
       return;
     }
 
@@ -51,7 +52,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
     addAsset();
   };
 
-  const isMaxAssets = currentAssetsCount >= 20;
+  const isMaxAssets = currentAssetsCount >= LIMITS.MAX_ASSETS;
 
   return (
     <GlassCard variant="default" padding="md" className="mb-6" allowOverflow={true}>
@@ -60,7 +61,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Assets:</span>
           <span className={`text-sm font-medium ${isMaxAssets ? 'text-red-400' : 'text-gray-400'}`}>
-            {currentAssetsCount}/20
+            {currentAssetsCount}/{LIMITS.MAX_ASSETS}
           </span>
         </div>
       </div>
@@ -157,7 +158,7 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
           <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-red-400 text-sm">Maximum of 20 assets reached</p>
+          <p className="text-red-400 text-sm">Maximum of {LIMITS.MAX_ASSETS} assets reached</p>
         </div>
       )}
       
