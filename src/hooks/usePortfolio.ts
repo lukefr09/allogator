@@ -98,6 +98,7 @@ export function usePortfolio(): UsePortfolioReturn {
   const [disambiguationDialog, setDisambiguationDialog] = useState<DisambiguationDialog | null>(null);
 
   const hasInitializedRef = useRef(false);
+  const handleRefreshPricesRef = useRef<(() => Promise<void>) | null>(null);
 
   const totalPercentage = useMemo(() => calculateTotalPercentage(assets), [assets]);
   const currentTotal = useMemo(() => assets.reduce((sum, asset) => sum + asset.currentValue, 0), [assets]);
@@ -176,18 +177,20 @@ export function usePortfolio(): UsePortfolioReturn {
     }
   }, [assets]);
 
-  // Initial price fetch
+  // Keep ref updated with latest handleRefreshPrices
+  useEffect(() => {
+    handleRefreshPricesRef.current = handleRefreshPrices;
+  }, [handleRefreshPrices]);
+
+  // Initial price fetch - uses ref to avoid stale closure
   useEffect(() => {
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
       setTimeout(() => {
-        if (assets.length > 0 && assets.some(a => a.symbol.trim() !== '')) {
-          handleRefreshPrices();
-        }
+        handleRefreshPricesRef.current?.();
       }, TIMINGS.INITIAL_PRICE_FETCH_DELAY_MS);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleRefreshPrices]);
+  }, []);
 
   const handleAddAsset = useCallback(async (newAsset: Omit<Asset, 'currentValue'>) => {
     if (assets.length >= LIMITS.MAX_ASSETS) return;
