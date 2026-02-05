@@ -59,28 +59,28 @@ const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, ena
           ref={symbolInputRef}
           type="text"
           placeholder="Symbol"
-          value={symbol}
+          value={symbol.toUpperCase()}
           onChange={(e) => setSymbol(e.target.value)}
-          className="input-dashed w-28 uppercase font-medium"
+          className="editable-value text-left w-24 font-medium"
           maxLength={10}
           disabled={isMaxAssets}
         />
 
-        <div className="relative">
+        <div className="inline-flex items-center">
           <input
             type="number"
-            placeholder="Target %"
+            placeholder="Target"
             value={targetPercentage}
             onChange={(e) => setTargetPercentage(e.target.value)}
             onWheel={preventNumberInputScroll}
-            className="input-dashed w-24 pr-6 tabular-nums"
+            className="editable-value text-left w-16 tabular-nums"
             step="0.1"
             min={enableSelling ? "0" : "0.1"}
             max="100"
             disabled={isMaxAssets}
           />
           <span
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm transition-colors duration-200"
+            className="text-sm ml-1 transition-colors duration-200"
             style={{ color: 'var(--text-tertiary)' }}
           >
             %

@@ -177,7 +177,10 @@ const PortfolioRebalancer = () => {
                     )}
 
                     {/* Total row */}
-                    <div className="flex justify-between items-baseline pt-3.5">
+                    <div
+                      className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
+                      style={{ borderColor: 'var(--rule-strong)' }}
+                    >
                       <span
                         className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
                         style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
@@ -214,7 +217,7 @@ const PortfolioRebalancer = () => {
                 </section>
 
                 {/* Result Section */}
-                <section>
+                <section className="mt-10">
                   <div
                     className="flex items-baseline justify-between pb-3 mb-1 border-b-2 transition-colors duration-200"
                     style={{ borderColor: 'var(--text)' }}
@@ -350,7 +353,10 @@ const PortfolioRebalancer = () => {
                     )}
 
                     {/* New Total row */}
-                    <div className="flex justify-between items-baseline pt-3.5">
+                    <div
+                      className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
+                      style={{ borderColor: 'var(--rule-strong)' }}
+                    >
                       <span
                         className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
                         style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
@@ -372,7 +378,7 @@ const PortfolioRebalancer = () => {
         </div>
       </main>
 
-      <Footer onShare={handleShare} showShareSuccess={showShareSuccess} />
+      <Footer onShare={handleShare} />
 
       {disambiguationDialog && (
         <AssetTypeDialog

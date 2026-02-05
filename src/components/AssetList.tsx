@@ -172,7 +172,7 @@ const AssetList: React.FC<AssetListProps> = memo(({
 
             return (
               <tr
-                key={asset.symbol}
+                key={index}
                 className="group border-t transition-colors duration-150 hover:bg-[var(--bg-subtle)]"
                 style={{ borderColor: 'var(--rule)' }}
               >

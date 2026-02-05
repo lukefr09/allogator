@@ -349,30 +349,25 @@
     border-right: 1px solid var(--rule);
   }
 
-  /* Banner messages */
+  /* Banner messages - editorial style, quiet inline notices */
   .banner {
-    padding: 10px 14px;
-    font-size: 13px;
-    margin-bottom: 20px;
-    border-left: 3px solid;
+    padding: 8px 0;
+    font-size: 12px;
+    margin-bottom: 16px;
+    border-left: none;
     transition: all 0.25s;
+    color: var(--text-secondary);
   }
 
   .banner-error {
-    background: var(--error-bg);
-    border-color: var(--negative);
-    color: var(--error-text);
+    color: var(--accent);
   }
 
   .banner-success {
-    background: var(--success-bg);
-    border-color: var(--positive);
-    color: var(--success-text);
+    color: var(--positive);
   }
 
   .banner-warning {
-    background: color-mix(in srgb, var(--warning) 10%, transparent);
-    border-color: var(--warning);
     color: var(--warning);
   }
 
