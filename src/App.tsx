@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import AddAsset from './components/AddAsset';
 import AssetList from './components/AssetList';
@@ -38,6 +38,12 @@ const PortfolioRebalancer = () => {
     handleDisambiguationChoice,
     setDisambiguationDialog,
   } = usePortfolio();
+
+  // Create O(1) lookup map to avoid O(n) find() calls inside render loops
+  const assetsBySymbol = useMemo(
+    () => new Map(assets.map(a => [a.symbol, a])),
+    [assets]
+  );
 
   const gradientColor = useGradientAnimation(allocations);
 
@@ -176,7 +182,7 @@ const PortfolioRebalancer = () => {
                         </>
                       ) : (
                         allocations.map((allocation, index) => {
-                          const asset = assets.find(a => a.symbol === allocation.symbol);
+                          const asset = assetsBySymbol.get(allocation.symbol);
                           const shares = asset?.currentPrice && asset.currentPrice > 0
                             ? Math.abs(allocation.amountToAdd) / asset.currentPrice
                             : null;
@@ -322,7 +328,7 @@ const PortfolioRebalancer = () => {
                         </>
                       ) : (
                         allocations.map((allocation, index) => {
-                          const asset = assets.find(a => a.symbol === allocation.symbol);
+                          const asset = assetsBySymbol.get(allocation.symbol);
                           const currentPercentage = currentTotal > 0 ? ((asset?.currentValue || 0) / currentTotal) * 100 : 0;
                           const absDiff = Math.abs(allocation.difference);
                           let statusColor = 'bg-emerald-400';
