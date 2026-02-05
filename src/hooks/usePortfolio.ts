@@ -234,6 +234,8 @@ export function usePortfolio(): UsePortfolioReturn {
   }, [assets.length]);
 
   const handleUpdateAsset = useCallback(async (index: number, field: keyof Asset, value: number | string | boolean) => {
+    if (index < 0 || index >= assets.length) return;
+
     const updated = [...assets];
 
     if (field === 'symbol') {
@@ -324,6 +326,7 @@ export function usePortfolio(): UsePortfolioReturn {
 
   const handleRemoveAsset = useCallback((index: number) => {
     setAssets(prev => {
+      if (index < 0 || index >= prev.length) return prev;
       if (prev.length <= LIMITS.MIN_ASSETS) return prev;
       return prev.filter((_, i) => i !== index);
     });
@@ -363,6 +366,11 @@ export function usePortfolio(): UsePortfolioReturn {
         setAssets(prev => [...prev, assetWithDefaults]);
       }
     } else if (field === 'symbol') {
+      if (index < 0 || index >= assets.length) {
+        setDisambiguationDialog(null);
+        return;
+      }
+
       let finalSymbol = symbol;
       if (choice === 'crypto' && exchange) {
         const cryptoSymbol = getCryptoSymbol(symbol, exchange);
