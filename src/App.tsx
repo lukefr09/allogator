@@ -4,7 +4,6 @@ import AddAsset from './components/AddAsset';
 import AssetList from './components/AssetList';
 import Footer from './components/Footer';
 import AnimatedNumber from './components/AnimatedNumber';
-import Skeleton from './components/Skeleton';
 import AssetTypeDialog from './components/AssetTypeDialog';
 import { usePortfolio } from './hooks/usePortfolio';
 import { encodePortfolioToUrl, copyToClipboard } from './utils/urlSharing';
@@ -46,6 +45,7 @@ const PortfolioRebalancer = () => {
 
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showSharesInAllocation, setShowSharesInAllocation] = useState(false);
+  const [rightPanelView, setRightPanelView] = useState<'allocate' | 'result'>('allocate');
 
   const handleShare = useCallback(async () => {
     const url = encodePortfolioToUrl(assets, newMoney, enableSelling);
@@ -105,35 +105,22 @@ const PortfolioRebalancer = () => {
             )}
 
             {validationErrors.length === 0 && allocations.length > 0 && (
-              <>
-                {/* Allocate Section */}
-                <section>
-                  <div
-                    className="flex items-baseline justify-between pb-3 mb-4 border-b-2 transition-colors duration-200"
-                    style={{ borderColor: 'var(--accent)' }}
-                  >
-                    <h2 className="section-title-sm">Allocate</h2>
-                    <span className="allocate-amount">
-                      <AnimatedNumber value={newMoney} prefix="$" className="" />
-                    </span>
-                  </div>
+              <section>
+                {/* Allocate View */}
+                {rightPanelView === 'allocate' && (
+                  <>
+                    <div
+                      className="flex items-baseline justify-between pb-3 mb-4 border-b-2 transition-colors duration-200"
+                      style={{ borderColor: 'var(--accent)' }}
+                    >
+                      <h2 className="section-title-sm">Allocate</h2>
+                      <span className="allocate-amount">
+                        <AnimatedNumber value={newMoney} prefix="$" className="" />
+                      </span>
+                    </div>
 
-                  <div className="space-y-0">
-                    {isLoadingPrices && allocations.length === 0 ? (
-                      <>
-                        {[1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between items-baseline py-2.5 border-b transition-colors duration-200"
-                            style={{ borderColor: 'var(--rule)' }}
-                          >
-                            <Skeleton width="60px" height="16px" />
-                            <Skeleton width="80px" height="16px" />
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      allocations.map((allocation, index) => {
+                    <div className="space-y-0">
+                      {allocations.map((allocation) => {
                         const asset = assetsBySymbol.get(allocation.symbol);
                         const shares = asset?.currentPrice && asset.currentPrice > 0
                           ? Math.abs(allocation.amountToAdd) / asset.currentPrice
@@ -144,10 +131,7 @@ const PortfolioRebalancer = () => {
                           <div
                             key={allocation.symbol}
                             className="flex justify-between items-baseline py-2.5 border-b transition-colors duration-200"
-                            style={{
-                              borderColor: 'var(--rule)',
-                              animationDelay: `${index * 50}ms`
-                            }}
+                            style={{ borderColor: 'var(--rule)' }}
                           >
                             <span
                               className="text-sm transition-colors duration-200"
@@ -173,131 +157,117 @@ const PortfolioRebalancer = () => {
                             </div>
                           </div>
                         );
-                      })
-                    )}
+                      })}
 
-                    {/* Total row */}
-                    <div
-                      className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
-                      style={{ borderColor: 'var(--rule-strong)' }}
-                    >
-                      <span
-                        className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
-                        style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
-                      >
-                        {enableSelling ? 'Net' : 'Total'}
-                      </span>
-                      <span className="allocate-value" style={{ fontSize: '16px' }}>
-                        <AnimatedNumber
-                          value={allocations.reduce((sum, a) => sum + a.amountToAdd, 0)}
-                          prefix="$"
-                          className=""
-                        />
-                      </span>
-                    </div>
-                    {enableSelling && (
+                      {/* Total row */}
                       <div
-                        className="text-xs mt-1 text-right transition-colors duration-200"
+                        className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
+                        style={{ borderColor: 'var(--rule-strong)' }}
+                      >
+                        <span
+                          className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
+                          style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
+                        >
+                          {enableSelling ? 'Net' : 'Total'}
+                        </span>
+                        <span className="allocate-value" style={{ fontSize: '16px' }}>
+                          <AnimatedNumber
+                            value={allocations.reduce((sum, a) => sum + a.amountToAdd, 0)}
+                            prefix="$"
+                            className=""
+                          />
+                        </span>
+                      </div>
+                      {enableSelling && (
+                        <div
+                          className="text-xs mt-1 text-right transition-colors duration-200"
+                          style={{ color: 'var(--text-tertiary)' }}
+                        >
+                          Buy: ${allocations.filter(a => a.amountToAdd > 0).reduce((sum, a) => sum + a.amountToAdd, 0).toFixed(2)} |
+                          Sell: ${Math.abs(allocations.filter(a => a.amountToAdd < 0).reduce((sum, a) => sum + a.amountToAdd, 0)).toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer links */}
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t transition-colors duration-200" style={{ borderColor: 'var(--rule)' }}>
+                      <button
+                        onClick={() => setShowSharesInAllocation(!showSharesInAllocation)}
+                        className="text-xs transition-colors duration-200 hover:underline"
                         style={{ color: 'var(--text-tertiary)' }}
                       >
-                        Buy: ${allocations.filter(a => a.amountToAdd > 0).reduce((sum, a) => sum + a.amountToAdd, 0).toFixed(2)} |
-                        Sell: ${Math.abs(allocations.filter(a => a.amountToAdd < 0).reduce((sum, a) => sum + a.amountToAdd, 0)).toFixed(2)}
+                        {showSharesInAllocation ? 'Hide' : 'Show'} shares
+                      </button>
+                      <button
+                        onClick={() => setRightPanelView('result')}
+                        className="text-xs transition-colors duration-200 hover:underline"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
+                        Show result breakdown →
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Result View */}
+                {rightPanelView === 'result' && (
+                  <>
+                    <div
+                      className="flex items-baseline justify-between pb-3 mb-1 border-b-2 transition-colors duration-200"
+                      style={{ borderColor: 'var(--text)' }}
+                    >
+                      <h2 className="section-title-sm">Result</h2>
+                      <button onClick={handleShare} className="copy-btn relative">
+                        Copy
+                        {showShareSuccess && (
+                          <span
+                            className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 text-xs rounded-sm whitespace-nowrap"
+                            style={{ background: 'var(--success-bg)', color: 'var(--success-text)' }}
+                          >
+                            Copied!
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Legend */}
+                    {!enableSelling && (
+                      <div
+                        className="flex gap-4 py-2.5 border-b mb-1 transition-colors duration-200"
+                        style={{ borderColor: 'var(--rule)' }}
+                      >
+                        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                          <span className="legend-dot on-target"></span>
+                          On target
+                        </span>
+                        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                          <span className="legend-dot close"></span>
+                          Close
+                        </span>
+                        <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                          <span className="legend-dot off"></span>
+                          Off
+                        </span>
                       </div>
                     )}
-                  </div>
 
-                  {/* Toggle for shares display */}
-                  <button
-                    onClick={() => setShowSharesInAllocation(!showSharesInAllocation)}
-                    className="mt-3 text-xs transition-colors duration-200"
-                    style={{ color: 'var(--text-tertiary)' }}
-                  >
-                    {showSharesInAllocation ? 'Hide' : 'Show'} share quantities
-                  </button>
-                </section>
-
-                {/* Result Section */}
-                <section className="mt-10">
-                  <div
-                    className="flex items-baseline justify-between pb-3 mb-1 border-b-2 transition-colors duration-200"
-                    style={{ borderColor: 'var(--text)' }}
-                  >
-                    <h2 className="section-title-sm">Result</h2>
-                    <button onClick={handleShare} className="copy-btn relative">
-                      Copy
-                      {showShareSuccess && (
-                        <span
-                          className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 text-xs rounded whitespace-nowrap"
-                          style={{ background: 'var(--success-bg)', color: 'var(--success-text)' }}
-                        >
-                          Copied!
+                    {enableSelling && (
+                      <div
+                        className="flex items-center gap-2 py-2.5 border-b mb-1 transition-colors duration-200"
+                        style={{ borderColor: 'var(--rule)' }}
+                      >
+                        <span className="result-dot on-target"></span>
+                        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                          {assets.some(a => a.noSell)
+                            ? 'Assets balanced (some locked from selling)'
+                            : 'All assets perfectly balanced at target'
+                          }
                         </span>
-                      )}
-                    </button>
-                  </div>
+                      </div>
+                    )}
 
-                  {/* Legend */}
-                  {!enableSelling && (
-                    <div
-                      className="flex gap-4 py-2.5 border-b mb-1 transition-colors duration-200"
-                      style={{ borderColor: 'var(--rule)' }}
-                    >
-                      <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                        <span className="legend-dot on-target"></span>
-                        On target
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                        <span className="legend-dot close"></span>
-                        Close
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                        <span className="legend-dot off"></span>
-                        Off
-                      </span>
-                    </div>
-                  )}
-
-                  {enableSelling && (
-                    <div
-                      className="flex items-center gap-2 py-2.5 border-b mb-1 transition-colors duration-200"
-                      style={{ borderColor: 'var(--rule)' }}
-                    >
-                      <span className="result-dot on-target"></span>
-                      <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                        {assets.some(a => a.noSell)
-                          ? 'Assets balanced (some locked from selling)'
-                          : 'All assets perfectly balanced at target'
-                        }
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="space-y-0">
-                    {isLoadingPrices && allocations.length === 0 ? (
-                      <>
-                        {[1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className="py-3 border-b transition-colors duration-200"
-                            style={{ borderColor: 'var(--rule)' }}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-2">
-                                <Skeleton width="6px" height="6px" className="rounded-full" />
-                                <Skeleton width="60px" height="14px" />
-                              </div>
-                              <div className="text-right">
-                                <Skeleton width="80px" height="16px" />
-                                <div className="mt-1">
-                                  <Skeleton width="100px" height="12px" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      allocations.map((allocation, index) => {
+                    <div className="space-y-0">
+                      {allocations.map((allocation) => {
                         const asset = assetsBySymbol.get(allocation.symbol);
                         const currentPercentage = currentTotal > 0 ? ((asset?.currentValue || 0) / currentTotal) * 100 : 0;
                         const absDiff = Math.abs(allocation.difference);
@@ -317,10 +287,7 @@ const PortfolioRebalancer = () => {
                           <div
                             key={allocation.symbol}
                             className="grid grid-cols-[1fr_auto] items-baseline py-3 border-b transition-colors duration-200"
-                            style={{
-                              borderColor: 'var(--rule)',
-                              animationDelay: `${index * 50 + 300}ms`
-                            }}
+                            style={{ borderColor: 'var(--rule)' }}
                           >
                             <div className="flex items-center gap-2">
                               <span className={`result-dot ${dotClass}`}></span>
@@ -349,30 +316,41 @@ const PortfolioRebalancer = () => {
                             </div>
                           </div>
                         );
-                      })
-                    )}
+                      })}
 
-                    {/* New Total row */}
-                    <div
-                      className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
-                      style={{ borderColor: 'var(--rule-strong)' }}
-                    >
-                      <span
-                        className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
-                        style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
+                      {/* New Total row */}
+                      <div
+                        className="flex justify-between items-baseline pt-3.5 mt-1 border-t-2 transition-colors duration-200"
+                        style={{ borderColor: 'var(--rule-strong)' }}
                       >
-                        New Total
-                      </span>
-                      <span
-                        className="font-serif text-xl tabular-nums"
-                        style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
-                      >
-                        <AnimatedNumber value={newTotal} prefix="$" className="" />
-                      </span>
+                        <span
+                          className="font-medium text-xs uppercase tracking-wider transition-colors duration-200"
+                          style={{ color: 'var(--text-secondary)', letterSpacing: '0.08em' }}
+                        >
+                          New Total
+                        </span>
+                        <span
+                          className="font-serif text-xl tabular-nums"
+                          style={{ fontFamily: 'Instrument Serif, Georgia, serif' }}
+                        >
+                          <AnimatedNumber value={newTotal} prefix="$" className="" />
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </section>
-              </>
+
+                    {/* Footer link */}
+                    <div className="mt-4 pt-3 border-t transition-colors duration-200" style={{ borderColor: 'var(--rule)' }}>
+                      <button
+                        onClick={() => setRightPanelView('allocate')}
+                        className="text-xs transition-colors duration-200 hover:underline"
+                        style={{ color: 'var(--text-tertiary)' }}
+                      >
+                        ← Show allocation
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
             )}
           </div>
         </div>
