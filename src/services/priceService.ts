@@ -55,6 +55,7 @@ class PriceService {
   private lastRequestTime = 0;
   private minRequestInterval = TIMINGS.MIN_REQUEST_INTERVAL_MS;
   private pendingRequests: Map<string, Promise<PriceData | null>> = new Map();
+  private static readonly MAX_RETRIES = 3;
   
   constructor(config: PriceServiceConfig) {
     this.useServerless = config.useServerless ?? true; // Default to serverless
@@ -88,7 +89,7 @@ class PriceService {
   }
   
   
-  async fetchPrice(symbol: string): Promise<PriceData | null> {
+  async fetchPrice(symbol: string, retryCount: number = 0): Promise<PriceData | null> {
     // Check if request is already pending
     const pending = this.pendingRequests.get(symbol);
     if (pending) {
@@ -102,7 +103,7 @@ class PriceService {
     }
 
     // Create new request
-    const request = this.performFetch(symbol);
+    const request = this.performFetch(symbol, retryCount);
     this.pendingRequests.set(symbol, request);
 
     try {
@@ -113,7 +114,7 @@ class PriceService {
     }
   }
 
-  private async performFetch(symbol: string): Promise<PriceData | null> {
+  private async performFetch(symbol: string, retryCount: number = 0): Promise<PriceData | null> {
     // Queue the request to avoid rate limits
     return this.requestQueue = this.requestQueue.then(async () => {
       // Check cache again in case another request already fetched it
@@ -137,10 +138,11 @@ class PriceService {
         const response = await fetchWithTimeout(url);
         
         if (response.status === 429) {
-          if (!this.useServerless && this.apiKeys.length > 1) {
+          if (!this.useServerless && this.apiKeys.length > 1 && retryCount < PriceService.MAX_RETRIES) {
             // API key rate limited, rotating to next key
             this.rotateApiKey();
-            return this.fetchPrice(symbol);
+            this.pendingRequests.delete(symbol);
+            return this.fetchPrice(symbol, retryCount + 1);
           }
           throw new Error('Price API temporarily at capacity. Please enter prices manually or try again in a few minutes.');
         }
