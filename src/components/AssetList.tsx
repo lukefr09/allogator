@@ -5,6 +5,7 @@ import Skeleton from './Skeleton';
 import { formatCurrency } from '../utils/formatters';
 import { getDisplayName } from '../utils/displayNames';
 import { preventNumberInputScroll } from '../utils/preventNumberScroll';
+import { PRECISION } from '../constants';
 
 interface AssetListProps {
   assets: Asset[];
@@ -18,6 +19,31 @@ interface AssetListProps {
   priceError?: string;
   isLoadingPrices?: boolean;
   enableSelling?: boolean;
+}
+
+const tableHeaderStyle = {
+  fontSize: '11px',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.08em',
+  color: 'var(--text-tertiary)',
+};
+
+interface TableHeaderProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const TableHeader: React.FC<TableHeaderProps> = ({ children, className = '' }) => (
+  <th
+    className={`text-left pb-2 font-medium transition-colors duration-200 ${className}`}
+    style={tableHeaderStyle}
+  >
+    {children}
+  </th>
+);
+
+function roundToSharePrecision(value: number): number {
+  return Math.round(value * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
 }
 
 const AssetList: React.FC<AssetListProps> = memo(({
@@ -40,14 +66,12 @@ const AssetList: React.FC<AssetListProps> = memo(({
 
   return (
     <div className="animate-fade-up">
-      {/* Error banner */}
       {priceError && (
         <div className="banner banner-error" role="alert" aria-live="polite">
           {priceError}
         </div>
       )}
 
-      {/* Section Header */}
       <div
         className="flex items-baseline justify-between mb-5 pb-3 border-b-2 transition-colors duration-200"
         style={{ borderColor: 'var(--text)' }}
@@ -102,67 +126,14 @@ const AssetList: React.FC<AssetListProps> = memo(({
         </div>
       </div>
 
-      {/* Positions Table */}
       <table className="positions-table w-full" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th
-              className="text-left pb-2 font-medium transition-colors duration-200"
-              style={{
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-tertiary)'
-              }}
-            >
-              Symbol
-            </th>
-            <th
-              className="text-left pb-2 pl-4 font-medium transition-colors duration-200"
-              style={{
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-tertiary)'
-              }}
-            >
-              {viewMode === 'money' ? 'Value' : 'Shares'}
-            </th>
-            <th
-              className="text-left pb-2 pl-4 font-medium transition-colors duration-200"
-              style={{
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-tertiary)'
-              }}
-            >
-              Target
-            </th>
-            <th
-              className="text-left pb-2 pl-4 font-medium transition-colors duration-200 hidden md:table-cell"
-              style={{
-                fontSize: '11px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-tertiary)'
-              }}
-            >
-              Current
-            </th>
-            {enableSelling && (
-              <th
-                className="text-center pb-2 font-medium transition-colors duration-200"
-                style={{
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--text-tertiary)'
-                }}
-              >
-                Lock
-              </th>
-            )}
+            <TableHeader>Symbol</TableHeader>
+            <TableHeader className="pl-4">{viewMode === 'money' ? 'Value' : 'Shares'}</TableHeader>
+            <TableHeader className="pl-4">Target</TableHeader>
+            <TableHeader className="pl-4 hidden md:table-cell">Current</TableHeader>
+            {enableSelling && <TableHeader className="text-center">Lock</TableHeader>}
             <th className="w-10"></th>
           </tr>
         </thead>
@@ -176,7 +147,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                 className="group border-t transition-colors duration-150 hover:bg-[var(--bg-subtle)]"
                 style={{ borderColor: 'var(--rule)' }}
               >
-                {/* Symbol Cell */}
                 <td className="py-3 align-middle">
                   <div className="font-medium" style={{ fontSize: '15px', letterSpacing: '0.02em' }}>
                     <input
@@ -262,7 +232,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                   </div>
                 </td>
 
-                {/* Value/Shares Cell */}
                 <td className="py-3 pl-4 align-middle">
                   {viewMode === 'money' ? (
                     <div className="relative inline-flex items-center">
@@ -302,7 +271,7 @@ const AssetList: React.FC<AssetListProps> = memo(({
                       </span>
                       <input
                         type="number"
-                        defaultValue={asset.shares ? (Math.round(asset.shares * 1000000) / 1000000).toString() : ''}
+                        defaultValue={asset.shares ? roundToSharePrecision(asset.shares).toString() : ''}
                         key={`shares-${index}-${asset.shares}`}
                         onWheel={preventNumberInputScroll}
                         onBlur={(e) => {
@@ -310,10 +279,9 @@ const AssetList: React.FC<AssetListProps> = memo(({
                           if (value === '') {
                             onUpdateAsset(index, 'shares', 0);
                           } else {
-                            let numValue = parseFloat(value);
+                            const numValue = parseFloat(value);
                             if (!isNaN(numValue)) {
-                              numValue = Math.round(numValue * 1000000) / 1000000;
-                              onUpdateAsset(index, 'shares', numValue);
+                              onUpdateAsset(index, 'shares', roundToSharePrecision(numValue));
                             }
                           }
                         }}
@@ -332,7 +300,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                   )}
                 </td>
 
-                {/* Target Cell */}
                 <td className="py-3 pl-4 align-middle">
                   <div className="inline-flex items-center">
                     <input
@@ -364,7 +331,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                   </div>
                 </td>
 
-                {/* Current Allocation Cell */}
                 <td
                   className="py-3 pl-4 align-middle tabular-nums hidden md:table-cell"
                   style={{ color: 'var(--text-secondary)', fontSize: '14px' }}
@@ -372,7 +338,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                   {currentAllocation.toFixed(1)}%
                 </td>
 
-                {/* Lock Cell (only when selling enabled) */}
                 {enableSelling && (
                   <td className="py-3 align-middle text-center">
                     <button
@@ -397,7 +362,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
                   </td>
                 )}
 
-                {/* Remove Cell */}
                 <td className="py-3 align-middle text-right">
                   <button
                     onClick={() => onRemoveAsset(index)}
@@ -419,7 +383,6 @@ const AssetList: React.FC<AssetListProps> = memo(({
         </tbody>
       </table>
 
-      {/* Validation warning */}
       {!isValidTotal && (
         <div className="banner banner-error mt-4" role="alert" aria-live="polite">
           Target percentages must total 100% (currently {totalPercentage.toFixed(1)}%)

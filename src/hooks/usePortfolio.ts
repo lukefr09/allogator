@@ -5,7 +5,13 @@ import { calculateAllocations } from '../utils/calculations';
 import { priceService } from '../services/priceService';
 import { decodePortfolioFromUrl } from '../utils/urlSharing';
 import { isAmbiguousSymbol, getCryptoSymbol, isCryptoAlias } from '../utils/cryptoAliases';
-import { LIMITS, PRECISION, TIMINGS } from '../constants';
+import { LIMITS, TIMINGS } from '../constants';
+import {
+  applyPriceToAsset,
+  clearAssetPriceFields,
+  calculateSharesFromValue,
+  createAssetWithDefaults,
+} from '../utils/assetHelpers';
 
 const STORAGE_KEY = 'allogator-portfolio';
 
@@ -49,7 +55,6 @@ interface UsePortfolioReturn {
 }
 
 function getInitialState() {
-  // URL takes priority (explicit sharing)
   const portfolioData = decodePortfolioFromUrl();
   if (portfolioData) {
     return {
@@ -59,7 +64,6 @@ function getInitialState() {
     };
   }
 
-  // Try localStorage as fallback
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -83,6 +87,22 @@ function getInitialState() {
   };
 }
 
+function resolveSymbol(rawSymbol: string, choice?: 'stock' | 'crypto', exchange?: 'binance' | 'coinbase'): string {
+  const symbol = rawSymbol.trim().toUpperCase();
+
+  if (choice === 'crypto' && exchange) {
+    const cryptoSymbol = getCryptoSymbol(symbol, exchange);
+    if (cryptoSymbol) return cryptoSymbol;
+  }
+
+  if (isCryptoAlias(symbol)) {
+    const cryptoSymbol = getCryptoSymbol(symbol, 'binance');
+    if (cryptoSymbol) return cryptoSymbol;
+  }
+
+  return symbol;
+}
+
 export function usePortfolio(): UsePortfolioReturn {
   const initialState = getInitialState();
 
@@ -104,7 +124,6 @@ export function usePortfolio(): UsePortfolioReturn {
   const currentTotal = useMemo(() => assets.reduce((sum, asset) => sum + asset.currentValue, 0), [assets]);
   const newTotal = useMemo(() => currentTotal + newMoney, [currentTotal, newMoney]);
 
-  // Validation and allocation calculation
   useEffect(() => {
     const validation = validatePortfolio(assets, enableSelling);
     setValidationErrors(validation.errors);
@@ -117,7 +136,6 @@ export function usePortfolio(): UsePortfolioReturn {
     }
   }, [assets, newMoney, enableSelling]);
 
-  // Save to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -126,9 +144,20 @@ export function usePortfolio(): UsePortfolioReturn {
         enableSelling
       }));
     } catch {
-      // Ignore localStorage errors (quota exceeded, private mode, etc.)
+      // Ignore localStorage errors
     }
   }, [assets, newMoney, enableSelling]);
+
+  const fetchPriceAndUpdateAsset = useCallback(async (
+    asset: Asset,
+    symbol: string
+  ): Promise<Asset> => {
+    const priceData = await priceService.fetchPrice(symbol);
+    if (priceData) {
+      return applyPriceToAsset({ ...asset, symbol }, priceData);
+    }
+    return { ...asset, symbol };
+  }, []);
 
   const handleRefreshPrices = useCallback(async () => {
     const symbols = assets.map(asset => asset.symbol).filter(symbol => symbol.trim() !== '');
@@ -143,20 +172,7 @@ export function usePortfolio(): UsePortfolioReturn {
       const updatedAssets = assets.map(asset => {
         const data = priceData.get(asset.symbol);
         if (data) {
-          const updatedAsset = {
-            ...asset,
-            currentPrice: data.price,
-            lastUpdated: data.timestamp,
-            priceSource: 'api' as const
-          };
-
-          if (updatedAsset.shares && updatedAsset.shares > 0 && data.price > 0) {
-            updatedAsset.currentValue = Math.round((updatedAsset.shares * data.price) * PRECISION.MONEY_MULTIPLIER) / PRECISION.MONEY_MULTIPLIER;
-          } else if (updatedAsset.currentValue > 0 && data.price > 0) {
-            updatedAsset.shares = Math.round((updatedAsset.currentValue / data.price) * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
-          }
-
-          return updatedAsset;
+          return applyPriceToAsset(asset, data);
         }
         return asset;
       });
@@ -177,12 +193,10 @@ export function usePortfolio(): UsePortfolioReturn {
     }
   }, [assets]);
 
-  // Keep ref updated with latest handleRefreshPrices
   useEffect(() => {
     handleRefreshPricesRef.current = handleRefreshPrices;
   }, [handleRefreshPrices]);
 
-  // Initial price fetch - uses ref to avoid stale closure
   useEffect(() => {
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
@@ -191,6 +205,20 @@ export function usePortfolio(): UsePortfolioReturn {
       }, TIMINGS.INITIAL_PRICE_FETCH_DELAY_MS);
     }
   }, []);
+
+  const addAssetWithPrice = useCallback(async (newAsset: Omit<Asset, 'currentValue'>, finalSymbol: string) => {
+    const asset = createAssetWithDefaults(newAsset, finalSymbol);
+
+    if (finalSymbol !== '') {
+      const updatedAsset = await fetchPriceAndUpdateAsset(asset, finalSymbol);
+      setAssets(prev => [...prev, updatedAsset]);
+      if (updatedAsset.currentPrice) {
+        setLastPriceUpdate(new Date().toISOString());
+      }
+    } else {
+      setAssets(prev => [...prev, asset]);
+    }
+  }, [fetchPriceAndUpdateAsset]);
 
   const handleAddAsset = useCallback(async (newAsset: Omit<Asset, 'currentValue'>) => {
     if (assets.length >= LIMITS.MAX_ASSETS) return;
@@ -207,39 +235,46 @@ export function usePortfolio(): UsePortfolioReturn {
       return;
     }
 
-    let finalSymbol = symbol;
-    if (isCryptoAlias(symbol)) {
-      const cryptoSymbol = getCryptoSymbol(symbol, 'binance');
-      if (cryptoSymbol) {
-        finalSymbol = cryptoSymbol;
+    const finalSymbol = resolveSymbol(symbol);
+    await addAssetWithPrice(newAsset, finalSymbol);
+  }, [assets.length, addAssetWithPrice]);
+
+  const updateSymbolWithPrice = useCallback(async (index: number, newSymbol: string) => {
+    const updated = [...assets];
+    const oldSymbol = updated[index].symbol;
+    updated[index].symbol = newSymbol;
+
+    if (oldSymbol !== newSymbol && newSymbol.trim() !== '') {
+      setIsLoadingPrices(true);
+      setPriceError(undefined);
+
+      try {
+        const priceData = await priceService.fetchPrice(newSymbol);
+        if (priceData) {
+          updated[index] = applyPriceToAsset(updated[index], priceData);
+          if (updated[index].currentValue > 0 && priceData.price > 0) {
+            updated[index].shares = calculateSharesFromValue(updated[index].currentValue, priceData.price);
+          }
+          setLastPriceUpdate(new Date().toISOString());
+        } else {
+          updated[index] = clearAssetPriceFields(updated[index]);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch price for ${newSymbol}:`, error);
+        const errorMessage = error instanceof Error ? error.message : `Unable to fetch price for ${newSymbol}. Enter price manually.`;
+        setPriceError(errorMessage);
+      } finally {
+        setIsLoadingPrices(false);
       }
+    } else if (newSymbol.trim() === '') {
+      updated[index] = clearAssetPriceFields(updated[index]);
     }
 
-    const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
-
-    if (finalSymbol !== '') {
-      const priceData = await priceService.fetchPrice(finalSymbol);
-      if (priceData) {
-        const assetWithPrice: Asset = {
-          ...assetWithDefaults,
-          currentPrice: priceData.price,
-          lastUpdated: priceData.timestamp,
-          priceSource: 'api'
-        };
-        setAssets(prev => [...prev, assetWithPrice]);
-        setLastPriceUpdate(new Date().toISOString());
-      } else {
-        setAssets(prev => [...prev, assetWithDefaults]);
-      }
-    } else {
-      setAssets(prev => [...prev, assetWithDefaults]);
-    }
-  }, [assets.length]);
+    setAssets(updated);
+  }, [assets]);
 
   const handleUpdateAsset = useCallback(async (index: number, field: keyof Asset, value: number | string | boolean) => {
     if (index < 0 || index >= assets.length) return;
-
-    const updated = [...assets];
 
     if (field === 'symbol') {
       const newSymbol = (value as string).trim().toUpperCase();
@@ -249,83 +284,45 @@ export function usePortfolio(): UsePortfolioReturn {
         return;
       }
 
-      let finalSymbol = newSymbol;
-      if (isCryptoAlias(newSymbol)) {
-        const cryptoSymbol = getCryptoSymbol(newSymbol, 'binance');
-        if (cryptoSymbol) {
-          finalSymbol = cryptoSymbol;
-        }
-      }
+      const finalSymbol = resolveSymbol(newSymbol);
+      await updateSymbolWithPrice(index, finalSymbol);
+      return;
+    }
 
-      const oldSymbol = updated[index].symbol;
-      updated[index].symbol = finalSymbol;
+    const updated = [...assets];
+    const asset = updated[index];
 
-      if (oldSymbol !== finalSymbol && finalSymbol.trim() !== '') {
-        setIsLoadingPrices(true);
-        setPriceError(undefined);
-
-        try {
-          const priceData = await priceService.fetchPrice(finalSymbol);
-          if (priceData) {
-            updated[index].currentPrice = priceData.price;
-            updated[index].lastUpdated = priceData.timestamp;
-            updated[index].priceSource = 'api';
-
-            if (updated[index].currentValue > 0 && priceData.price > 0) {
-              updated[index].shares = Math.round((updated[index].currentValue / priceData.price) * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
-            }
-
-            setLastPriceUpdate(new Date().toISOString());
-          } else {
-            updated[index].currentPrice = undefined;
-            updated[index].lastUpdated = undefined;
-            updated[index].priceSource = undefined;
-            updated[index].shares = undefined;
-          }
-        } catch (error) {
-          console.error(`Failed to fetch price for ${finalSymbol}:`, error);
-          const errorMessage = error instanceof Error ? error.message : `Unable to fetch price for ${finalSymbol}. Enter price manually.`;
-          setPriceError(errorMessage);
-        } finally {
-          setIsLoadingPrices(false);
-        }
-      } else if (finalSymbol.trim() === '') {
-        updated[index].currentPrice = undefined;
-        updated[index].lastUpdated = undefined;
-        updated[index].priceSource = undefined;
-        updated[index].shares = undefined;
-      }
-    } else if (field === 'currentValue') {
-      updated[index].currentValue = value as number;
-      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
-        updated[index].shares = Math.round(((value as number) / updated[index].currentPrice!) * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
+    if (field === 'currentValue') {
+      asset.currentValue = value as number;
+      if (asset.currentPrice && asset.currentPrice > 0) {
+        asset.shares = calculateSharesFromValue(value as number, asset.currentPrice);
       }
     } else if (field === 'shares') {
-      updated[index].shares = value as number;
-      if (updated[index].currentPrice && updated[index].currentPrice > 0) {
-        updated[index].currentValue = Math.round(((value as number) * updated[index].currentPrice!) * PRECISION.MONEY_MULTIPLIER) / PRECISION.MONEY_MULTIPLIER;
+      asset.shares = value as number;
+      if (asset.currentPrice && asset.currentPrice > 0) {
+        asset.currentValue = Math.round((value as number) * asset.currentPrice * 100) / 100;
       }
     } else if (field === 'targetPercentage') {
-      updated[index].targetPercentage = value as number;
+      asset.targetPercentage = value as number;
     } else if (field === 'currentPrice') {
-      updated[index].currentPrice = value as number;
+      asset.currentPrice = value as number;
       if ((value as number) > 0) {
-        if (updated[index].shares && updated[index].shares > 0) {
-          updated[index].currentValue = Math.round((updated[index].shares! * (value as number)) * PRECISION.MONEY_MULTIPLIER) / PRECISION.MONEY_MULTIPLIER;
-        } else if (updated[index].currentValue > 0) {
-          updated[index].shares = Math.round((updated[index].currentValue / (value as number)) * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
+        if (asset.shares && asset.shares > 0) {
+          asset.currentValue = Math.round(asset.shares * (value as number) * 100) / 100;
+        } else if (asset.currentValue > 0) {
+          asset.shares = calculateSharesFromValue(asset.currentValue, value as number);
         }
       }
     } else if (field === 'lastUpdated') {
-      updated[index].lastUpdated = value as string;
+      asset.lastUpdated = value as string;
     } else if (field === 'priceSource') {
-      updated[index].priceSource = value as 'api' | 'manual';
+      asset.priceSource = value as 'api' | 'manual';
     } else if (field === 'noSell') {
-      updated[index].noSell = value as boolean;
+      asset.noSell = value as boolean;
     }
 
     setAssets(updated);
-  }, [assets]);
+  }, [assets, updateSymbolWithPrice]);
 
   const handleRemoveAsset = useCallback((index: number) => {
     setAssets(prev => {
@@ -339,88 +336,18 @@ export function usePortfolio(): UsePortfolioReturn {
     if (!disambiguationDialog) return;
 
     const { index, symbol, field, newAsset } = disambiguationDialog;
+    const finalSymbol = resolveSymbol(symbol, choice, exchange);
 
     if (field === 'add' && newAsset) {
-      let finalSymbol = symbol;
-      if (choice === 'crypto' && exchange) {
-        const cryptoSymbol = getCryptoSymbol(symbol, exchange);
-        if (cryptoSymbol) {
-          finalSymbol = cryptoSymbol;
-        }
-      }
-
-      const assetWithDefaults: Asset = { ...newAsset, symbol: finalSymbol, currentValue: 0 };
-
-      if (finalSymbol !== '') {
-        const priceData = await priceService.fetchPrice(finalSymbol);
-        if (priceData) {
-          const assetWithPrice: Asset = {
-            ...assetWithDefaults,
-            currentPrice: priceData.price,
-            lastUpdated: priceData.timestamp,
-            priceSource: 'api'
-          };
-          setAssets(prev => [...prev, assetWithPrice]);
-          setLastPriceUpdate(new Date().toISOString());
-        } else {
-          setAssets(prev => [...prev, assetWithDefaults]);
-        }
-      } else {
-        setAssets(prev => [...prev, assetWithDefaults]);
-      }
+      await addAssetWithPrice(newAsset, finalSymbol);
     } else if (field === 'symbol') {
-      if (index < 0 || index >= assets.length) {
-        setDisambiguationDialog(null);
-        return;
+      if (index >= 0 && index < assets.length) {
+        await updateSymbolWithPrice(index, finalSymbol);
       }
-
-      let finalSymbol = symbol;
-      if (choice === 'crypto' && exchange) {
-        const cryptoSymbol = getCryptoSymbol(symbol, exchange);
-        if (cryptoSymbol) {
-          finalSymbol = cryptoSymbol;
-        }
-      }
-
-      const updated = [...assets];
-      updated[index].symbol = finalSymbol;
-
-      if (finalSymbol !== '') {
-        setIsLoadingPrices(true);
-        setPriceError(undefined);
-
-        try {
-          const priceData = await priceService.fetchPrice(finalSymbol);
-          if (priceData) {
-            updated[index].currentPrice = priceData.price;
-            updated[index].lastUpdated = priceData.timestamp;
-            updated[index].priceSource = 'api';
-
-            if (updated[index].currentValue > 0 && priceData.price > 0) {
-              updated[index].shares = Math.round((updated[index].currentValue / priceData.price) * PRECISION.SHARE_MULTIPLIER) / PRECISION.SHARE_MULTIPLIER;
-            }
-
-            setLastPriceUpdate(new Date().toISOString());
-          } else {
-            updated[index].currentPrice = undefined;
-            updated[index].lastUpdated = undefined;
-            updated[index].priceSource = undefined;
-            updated[index].shares = undefined;
-          }
-        } catch (error) {
-          console.error(`Failed to fetch price for ${finalSymbol}:`, error);
-          const errorMessage = error instanceof Error ? error.message : `Unable to fetch price for ${finalSymbol}. Enter price manually.`;
-          setPriceError(errorMessage);
-        } finally {
-          setIsLoadingPrices(false);
-        }
-      }
-
-      setAssets(updated);
     }
 
     setDisambiguationDialog(null);
-  }, [disambiguationDialog, assets]);
+  }, [disambiguationDialog, assets.length, addAssetWithPrice, updateSymbolWithPrice]);
 
   return {
     assets,
