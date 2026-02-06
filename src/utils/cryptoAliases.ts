@@ -1,6 +1,4 @@
-// Mapping of crypto aliases to their exchange symbols
 export const cryptoAliases: Record<string, { binance?: string; coinbase?: string; name: string }> = {
-  // Top 100 cryptocurrencies
   'BTC': { binance: 'BINANCE:BTCUSDT', coinbase: 'COINBASE:BTC-USD', name: 'Bitcoin' },
   'ETH': { binance: 'BINANCE:ETHUSDT', coinbase: 'COINBASE:ETH-USD', name: 'Ethereum' },
   'XRP': { binance: 'BINANCE:XRPUSDT', coinbase: 'COINBASE:XRP-USD', name: 'XRP' },

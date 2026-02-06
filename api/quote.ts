@@ -76,9 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const response = await fetch(finnhubUrl);
       
-      // If rate limited, try next key
       if (response.status === 429 && i < apiKeys.length - 1) {
-        // Rate limited, try next key
         continue;
       }
       
@@ -92,9 +90,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       return res.status(response.status).json(data);
     } catch (error) {
-      // Error with current API key
-      
-      // If this was the last key, return error
       if (i === apiKeys.length - 1) {
         return res.status(500).json({ 
           error: 'Failed to fetch price data',

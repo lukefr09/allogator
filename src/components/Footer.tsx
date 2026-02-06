@@ -27,7 +27,7 @@ const Footer: React.FC<FooterProps> = ({ onShare }) => {
           </button>
         )}
         <a
-          href="https://github.com"
+          href="https://github.com/lukefr09/allogator"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs transition-colors duration-200 hover:underline"

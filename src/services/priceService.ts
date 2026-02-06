@@ -139,7 +139,6 @@ class PriceService {
         
         if (response.status === 429) {
           if (!this.useServerless && this.apiKeys.length > 1 && retryCount < PriceService.MAX_RETRIES) {
-            // API key rate limited, rotating to next key
             this.rotateApiKey();
             this.pendingRequests.delete(symbol);
             return this.fetchPrice(symbol, retryCount + 1);

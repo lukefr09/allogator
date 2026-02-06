@@ -1,4 +1,3 @@
-// Map exchange symbols to display names
 export function getDisplayName(symbol: string): string {
   // If it's an exchange format like BINANCE:BTCUSDT or COINBASE:BTC-USD
   if (symbol.includes(':')) {
@@ -16,11 +15,9 @@ export function getDisplayName(symbol: string): string {
         return pair.replace('-USD', '');
       }
       
-      // For other cases, just return the pair part
       return pair;
     }
   }
-  
-  // For regular symbols, return as-is
+
   return symbol;
 }
