@@ -1,65 +1,100 @@
-import { Asset } from '../types';
-import { LIMITS, THRESHOLDS } from '../constants';
+import type { Asset, Portfolio } from '../types';
 
-export const validatePortfolio = (assets: Asset[], enableSelling: boolean = false): { isValid: boolean; errors: string[] } => {
+export const MAX_VALUE = 1_000_000_000;
+export const MAX_ASSETS = 20;
+export const SYMBOL_PATTERN = /^[A-Z0-9][A-Z0-9.:-]{0,29}$/;
+export const toCents = (value: number) => Math.round(value * 100);
+export const toBasisPoints = (weight: number) => Math.round(weight * 10_000);
+export const getValueCents = (asset: Asset) =>
+  toCents(
+    asset.basis === 'shares'
+      ? asset.shares * (asset.currentPrice ?? 0)
+      : asset.currentValue,
+  );
+export const calculateTotalPercentage = (assets: Asset[]) =>
+  assets.reduce(
+    (sum, asset) => sum + toBasisPoints(asset.targetPercentage),
+    0,
+  ) / 100;
+
+export function hasHolding(
+  assets: Asset[],
+  { symbol, kind }: Pick<Asset, 'symbol' | 'kind'>,
+): boolean {
+  return assets.some((asset) => asset.symbol === symbol && asset.kind === kind);
+}
+
+export function isBounded(value: unknown, max = MAX_VALUE): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= max
+  );
+}
+
+export function validatePortfolio({ assets, newMoney }: Portfolio) {
   const errors: string[] = [];
-
-  if (assets.length < LIMITS.MIN_ASSETS) {
-    errors.push(`Portfolio must contain at least ${LIMITS.MIN_ASSETS} assets`);
+  if (!assets.length) errors.push('Add a holding to create your plan.');
+  if (assets.length > MAX_ASSETS) errors.push('Use up to 20 holdings.');
+  if (
+    !isBounded(newMoney) ||
+    Math.abs(newMoney * 100 - toCents(newMoney)) > 0.0001
+  ) {
+    errors.push(
+      'Enter a contribution between $0 and $1 billion, with at most two decimal places.',
+    );
   }
-
-  if (assets.length > LIMITS.MAX_ASSETS) {
-    errors.push(`Portfolio cannot contain more than ${LIMITS.MAX_ASSETS} assets`);
-  }
-
-  // Check for duplicate symbols
-  const symbols = assets.map(a => a.symbol);
-  const uniqueSymbols = new Set(symbols);
-  if (symbols.length !== uniqueSymbols.size) {
-    errors.push('Duplicate symbols are not allowed');
-  }
-
-  // Check for empty symbols
-  if (assets.some(a => !a.symbol || a.symbol.trim() === '')) {
-    errors.push('All assets must have a symbol');
-  }
-
-  // Check for negative values
-  if (assets.some(a => a.currentValue < 0)) {
-    errors.push('Current values cannot be negative');
-  }
-
-  // Check for negative or zero percentages
-  if (enableSelling) {
-    // When selling is enabled, allow 0% but not negative
-    if (assets.some(a => a.targetPercentage < 0)) {
-      errors.push('Target percentages cannot be negative');
+  const keys = assets.map((a) => a.kind + ':' + a.symbol);
+  if (new Set(keys).size !== keys.length)
+    errors.push('Each asset can appear only once.');
+  for (const asset of assets) {
+    const name = asset.symbol || 'Holding';
+    if (!SYMBOL_PATTERN.test(asset.symbol))
+      errors.push(
+        'Use a symbol with 1–30 letters, digits, dots, colons, or hyphens.',
+      );
+    if (!isBounded(asset.currentValue) || !isBounded(asset.shares, 1e12))
+      errors.push(name + ': enter a valid holding.');
+    if (
+      !isBounded(asset.targetPercentage, 1) ||
+      Math.abs(
+        asset.targetPercentage * 10_000 - toBasisPoints(asset.targetPercentage),
+      ) > 0.000001
+    ) {
+      errors.push(
+        name + ': target must be 0–100%, with at most two decimal places.',
+      );
     }
-  } else {
-    // When selling is disabled, percentages must be greater than 0
-    if (assets.some(a => a.targetPercentage <= 0)) {
-      const hasZeroPercentage = assets.some(a => a.targetPercentage === 0);
-      if (hasZeroPercentage) {
-        errors.push('Enable selling mode to set 0% allocations');
-      } else {
-        errors.push('Target percentages must be greater than 0');
-      }
+    if (
+      asset.currentPrice !== undefined &&
+      (!isBounded(asset.currentPrice) || asset.currentPrice <= 0)
+    ) {
+      errors.push(name + ': enter a positive price.');
+    }
+    if (asset.basis === 'shares' && asset.shares > 0 && !asset.currentPrice) {
+      errors.push(name + ': set a price to value your shares.');
+    }
+    if (
+      !Number.isSafeInteger(getValueCents(asset)) ||
+      getValueCents(asset) < 0 ||
+      getValueCents(asset) > MAX_VALUE * 100
+    ) {
+      errors.push(name + ': holding value must be at most $1 billion.');
     }
   }
-
-  const totalPercentage = assets.reduce((sum, asset) => sum + asset.targetPercentage, 0);
-  const percentageSum = totalPercentage * 100;
-
-  if (Math.abs(percentageSum - 100) > THRESHOLDS.PERCENTAGE_TOLERANCE) {
-    errors.push(`Target percentages must sum to 100% (currently ${percentageSum.toFixed(1)}%)`);
+  const total = assets.reduce(
+    (sum, a) => sum + toBasisPoints(a.targetPercentage),
+    0,
+  );
+  if (assets.length && total !== 10_000) {
+    errors.push(
+      total < 10_000
+        ? 'Allocate the remaining ' + ((10_000 - total) / 100).toFixed(2) + '%.'
+        : 'Reduce targets by ' +
+            ((total - 10_000) / 100).toFixed(2) +
+            '% to reach 100%.',
+    );
   }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
-
-export const calculateTotalPercentage = (assets: Asset[]): number => {
-  return assets.reduce((sum, asset) => sum + asset.targetPercentage, 0) * 100;
-};
+  return { isValid: !errors.length, errors: [...new Set(errors)] };
+}

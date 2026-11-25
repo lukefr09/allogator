@@ -1,160 +1,83 @@
-import { Asset, AllocationResult } from '../types';
+import type { Asset, AllocationResult } from '../types';
+import {
+  getValueCents,
+  toBasisPoints,
+  toCents,
+  validatePortfolio,
+} from './validation';
 
-interface AllocationWorkingSet {
-  asset: Asset;
-  currentValue: number;
-  targetValue: number;
-  amountToAdd: number;
-  canSell: boolean;
-}
-
-export const calculateAllocations = (
+/**
+ * Project target values onto the feasible portfolio:
+ * minimize the sum of squared percentage-point deviations, subject to
+ * cash conservation, nonnegative holdings, and optional no-selling bounds.
+ * Round the final positions once, allocating residual cents by largest remainder.
+ */
+export function calculateAllocations(
   assets: Asset[],
   newMoney: number,
-  enableSelling: boolean = false
-): AllocationResult[] => {
-  const currentTotal = assets.reduce((sum, asset) => sum + asset.currentValue, 0);
-  const newTotal = currentTotal + newMoney;
-
-  // If selling mode is enabled, handle rebalancing with locked assets
-  if (enableSelling) {
-    // Step 1: Calculate what we can actually sell and what we need to buy
-    let availableCash = newMoney;
-    const allocations: AllocationWorkingSet[] = [];
-    
-    // First pass: identify sells and buys
-    assets.forEach(asset => {
-      const targetValue = newTotal * asset.targetPercentage;
-      const currentValue = asset.currentValue;
-      const idealDifference = targetValue - currentValue;
-      
-      if (asset.noSell) {
-        // Locked asset - can't sell, can only buy if underweight
-        allocations.push({
-          asset,
-          currentValue,
-          targetValue,
-          amountToAdd: idealDifference > 0 ? idealDifference : 0,
-          canSell: false
-        });
-      } else {
-        // Unlocked asset - can buy or sell
-        allocations.push({
-          asset,
-          currentValue,
-          targetValue,
-          amountToAdd: idealDifference,
-          canSell: true
-        });
-        
-        // If selling from this asset, add to available cash
-        if (idealDifference < 0) {
-          availableCash += Math.abs(idealDifference);
-        }
-      }
+  enableSelling = false,
+): AllocationResult[] {
+  const validation = validatePortfolio({ assets, newMoney, enableSelling });
+  if (!validation.isValid) throw new Error(validation.errors.join(' '));
+  const current = assets.map(getValueCents);
+  const total =
+    current.reduce((sum, value) => sum + value, 0) + toCents(newMoney);
+  const desired = assets.map(
+    (a) => (total * toBasisPoints(a.targetPercentage)) / 10_000,
+  );
+  const lower = assets.map((a, i) =>
+    !enableSelling || a.noSell ? current[i] : 0,
+  );
+  const projected = [...lower];
+  let free = assets.map((_, i) => i);
+  let budget = total;
+  while (free.length) {
+    const offset =
+      (free.reduce((sum, i) => sum + desired[i], 0) - budget) / free.length;
+    const constrained = free.filter((i) => desired[i] - offset < lower[i]);
+    if (!constrained.length) {
+      free.forEach((i) => {
+        projected[i] = Math.max(lower[i], desired[i] - offset);
+      });
+      break;
+    }
+    const fixed = new Set(constrained);
+    constrained.forEach((i) => {
+      projected[i] = lower[i];
+      budget -= lower[i];
     });
-    
-    // Step 2: Calculate total buy needs (only positive amounts)
-    const totalBuyNeeded = allocations
-      .filter(a => a.amountToAdd > 0)
-      .reduce((sum, a) => sum + a.amountToAdd, 0);
-    
-    // Step 3: If we don't have enough cash for all buys, scale them down proportionally
-    const scalingFactor = totalBuyNeeded > availableCash ? availableCash / totalBuyNeeded : 1;
-    
-    // Step 4: Apply final allocations
-    return allocations.map(({ asset, currentValue, amountToAdd, canSell }) => {
-      let finalAmount = 0;
-      
-      if (asset.noSell && amountToAdd <= 0) {
-        // Locked and overweight/at target - no change
-        finalAmount = 0;
-      } else if (amountToAdd > 0) {
-        // Needs buying - apply scaling if necessary
-        finalAmount = amountToAdd * scalingFactor;
-      } else if (canSell && amountToAdd < 0) {
-        // Can sell and overweight
-        finalAmount = amountToAdd; // negative value for selling
-      }
-      
-      const newValue = currentValue + finalAmount;
-      const newPercentage = newTotal > 0 ? (newValue / newTotal) * 100 : 0;
-
-      return {
-        symbol: asset.symbol,
-        amountToAdd: parseFloat(finalAmount.toFixed(2)),
-        newValue: parseFloat(newValue.toFixed(2)),
-        newPercentage,
-        targetPercentage: asset.targetPercentage * 100,
-        difference: newPercentage - (asset.targetPercentage * 100)
-      };
-    });
+    free = free.filter((i) => !fixed.has(i));
   }
-  
-  // Original logic for buy-only allocation
-  // Calculate initial deviations and sort by most underweight
-  const assetsWithDeviation = assets.map((asset, index) => {
-    const currentPercentage = currentTotal > 0 ? (asset.currentValue / currentTotal) * 100 : 0;
-    const targetPercentage = asset.targetPercentage * 100;
-    const deviation = currentPercentage - targetPercentage;
-    return { asset, index, deviation, targetPercentage };
-  }).sort((a, b) => a.deviation - b.deviation);
-  
-  const results: AllocationResult[] = new Array(assets.length);
-  let remainingMoney = Math.round(newMoney * 100); // Work in cents
-  
-  // First pass: allocate to underweight positions
-  assetsWithDeviation.forEach(({ asset, index, targetPercentage }) => {
-    const targetValue = Math.round(newTotal * asset.targetPercentage * 100); // In cents
-    const currentValueCents = Math.round(asset.currentValue * 100);
-    const needed = Math.max(0, targetValue - currentValueCents);
-    const toAllocate = Math.min(needed, remainingMoney);
-    
-    const newValueCents = currentValueCents + toAllocate;
-    const newTotalCents = newTotal * 100;
-    results[index] = {
+  const final = projected.map(Math.floor);
+  let remainder = total - final.reduce((sum, value) => sum + value, 0);
+  const order = assets
+    .map((asset, i) => ({
+      i,
+      fraction: projected[i] - final[i],
+      key: asset.kind + ':' + asset.symbol,
+    }))
+    .sort((a, b) =>
+      Math.abs(b.fraction - a.fraction) > 1e-7
+        ? b.fraction - a.fraction
+        : a.key.localeCompare(b.key, 'en'),
+    );
+  for (const { i } of order) {
+    if (remainder <= 0) break;
+    final[i]++;
+    remainder--;
+  }
+  if (remainder !== 0) throw new Error('Could not reconcile the trade plan.');
+  return assets.map((asset, i) => {
+    const percentage = total > 0 ? (final[i] / total) * 100 : 0;
+    const target = toBasisPoints(asset.targetPercentage) / 100;
+    return {
+      id: asset.id,
       symbol: asset.symbol,
-      amountToAdd: parseFloat((toAllocate / 100).toFixed(2)),
-      newValue: parseFloat((asset.currentValue + (toAllocate / 100)).toFixed(2)),
-      newPercentage: newTotalCents > 0 ? (newValueCents / newTotalCents) * 100 : 0,
-      targetPercentage,
-      difference: 0
+      amountToAdd: (final[i] - current[i]) / 100,
+      newValue: final[i] / 100,
+      newPercentage: percentage,
+      targetPercentage: target,
+      difference: percentage - target,
     };
-    
-    remainingMoney -= toAllocate;
   });
-  
-  // Second pass: if money remains, allocate proportionally
-  if (remainingMoney > 0) {
-    let allocatedInSecondPass = 0;
-    
-    assetsWithDeviation.forEach(({ asset, index }) => {
-      if (remainingMoney > 0) {
-        const proportion = asset.targetPercentage;
-        const proportionalAmount = Math.round(remainingMoney * proportion);
-        const toAllocate = Math.min(proportionalAmount, remainingMoney - allocatedInSecondPass);
-        
-        results[index].amountToAdd = parseFloat((results[index].amountToAdd + (toAllocate / 100)).toFixed(2));
-        allocatedInSecondPass += toAllocate;
-      }
-    });
-    
-    remainingMoney -= allocatedInSecondPass;
-  }
-  
-  // Final pass: handle any remaining cents due to rounding
-  if (remainingMoney > 0) {
-    // Give remaining cents to the most underweight position
-    const mostUnderweightIndex = assetsWithDeviation[0].index;
-    results[mostUnderweightIndex].amountToAdd = parseFloat((results[mostUnderweightIndex].amountToAdd + (remainingMoney / 100)).toFixed(2));
-  }
-  
-  // Calculate final values and differences
-  results.forEach((result, index) => {
-    result.newValue = parseFloat((assets[index].currentValue + result.amountToAdd).toFixed(2));
-    result.newPercentage = newTotal > 0 ? (result.newValue / newTotal) * 100 : 0;
-    result.difference = result.newPercentage - result.targetPercentage;
-  });
-  
-  return results;
-};
+}

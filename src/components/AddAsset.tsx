@@ -1,125 +1,114 @@
-import React, { useState, useRef } from 'react';
-import { Asset } from '../types';
-import { LIMITS } from '../constants';
-import { preventNumberInputScroll } from '../utils/preventNumberScroll';
+import { useId, useState } from 'react';
+import type { Asset, AssetKind } from '../types';
+import { createAsset } from '../utils/portfolio';
+import { hasHolding, SYMBOL_PATTERN } from '../utils/validation';
+import Dialog from './Dialog';
+import NumberField from './NumberField';
 
-interface AddAssetProps {
-  onAddAsset: (asset: Omit<Asset, 'currentValue'>) => void | Promise<void>;
-  currentAssetsCount: number;
-  enableSelling?: boolean;
-}
-
-const AddAsset: React.FC<AddAssetProps> = ({ onAddAsset, currentAssetsCount, enableSelling = false }) => {
+export default function AddAsset({
+  remaining,
+  assets,
+  onAdd,
+  onClose,
+}: {
+  remaining: number;
+  assets: Asset[];
+  onAdd: (asset: Asset) => void;
+  onClose: () => void;
+}) {
+  const id = useId();
   const [symbol, setSymbol] = useState('');
-  const [targetPercentage, setTargetPercentage] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-  const symbolInputRef = useRef<HTMLInputElement>(null);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (currentAssetsCount >= LIMITS.MAX_ASSETS) {
-      return;
-    }
-
-    const percentage = parseFloat(targetPercentage);
-    const minPercentage = enableSelling ? 0 : 0.1;
-    if (!symbol || isNaN(percentage) || percentage < minPercentage || percentage > 100) {
-      return;
-    }
-
-    setIsAdding(true);
-
-    const addAsset = async () => {
-      await onAddAsset({
-        symbol: symbol.toUpperCase(),
-        targetPercentage: percentage / 100
-      });
-
-      setTimeout(() => {
-        setSymbol('');
-        setTargetPercentage('');
-        setIsAdding(false);
-        symbolInputRef.current?.focus();
-      }, 100);
-    };
-
-    addAsset();
-  };
-
-  const isMaxAssets = currentAssetsCount >= LIMITS.MAX_ASSETS;
-
+  const [kind, setKind] = useState<AssetKind>('stock');
+  const [target, setTarget] = useState(Math.max(0, remaining));
+  const [value, setValue] = useState(0);
+  const [valueValid, setValueValid] = useState(true);
+  const [targetValid, setTargetValid] = useState(true);
+  const [error, setError] = useState('');
   return (
-    <div
-      className="border-t pt-4 flex flex-wrap items-center gap-3 transition-colors duration-200"
-      style={{ borderColor: 'var(--rule)' }}
-    >
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
-        <input
-          ref={symbolInputRef}
-          type="text"
-          placeholder="Symbol"
-          value={symbol.toUpperCase()}
-          onChange={(e) => setSymbol(e.target.value)}
-          className="editable-value text-left w-24 font-medium"
-          maxLength={10}
-          disabled={isMaxAssets}
-        />
-
-        <div className="inline-flex items-center">
-          <input
-            type="number"
-            placeholder="Target"
-            value={targetPercentage}
-            onChange={(e) => setTargetPercentage(e.target.value)}
-            onWheel={preventNumberInputScroll}
-            className="editable-value text-left w-16 tabular-nums"
-            step="0.1"
-            min={enableSelling ? "0" : "0.1"}
-            max="100"
-            disabled={isMaxAssets}
-          />
-          <span
-            className="text-sm ml-1 transition-colors duration-200"
-            style={{ color: 'var(--text-tertiary)' }}
-          >
-            %
-          </span>
-        </div>
-
-        <button
-          type="submit"
-          className="btn-outline relative"
-          disabled={isMaxAssets || isAdding || !symbol || !targetPercentage}
-        >
-          <span className={`transition-opacity duration-200 ${isAdding ? 'opacity-0' : 'opacity-100'}`}>
-            Add
-          </span>
-          {isAdding && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg className="w-4 h-4 animate-spin" style={{ color: 'var(--text)' }} fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            </div>
-          )}
-        </button>
-      </form>
-
-      <span
-        className="text-xs ml-auto transition-colors duration-200"
-        style={{ color: 'var(--text-tertiary)' }}
+    <Dialog title="Add a holding" onClose={onClose}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const normalized = symbol.trim().toUpperCase();
+          if (!SYMBOL_PATTERN.test(normalized)) {
+            setError('Use 1–30 letters, digits, dots, colons, or hyphens.');
+            return;
+          }
+          if (hasHolding(assets, { symbol: normalized, kind })) {
+            setError('This asset is already in your portfolio.');
+            return;
+          }
+          if (!valueValid || !targetValid) return;
+          onAdd(
+            createAsset({
+              symbol: normalized,
+              kind,
+              currentValue: value,
+              targetPercentage: target / 100,
+            }),
+          );
+        }}
       >
-        {currentAssetsCount} / {LIMITS.MAX_ASSETS}
-      </span>
-
-      {isMaxAssets && (
-        <span className="text-xs" style={{ color: 'var(--negative)' }}>
-          Maximum assets reached
-        </span>
-      )}
-    </div>
+        <label className="form-label" htmlFor={id + '-symbol'}>
+          Symbol
+        </label>
+        <input
+          data-initial-focus
+          id={id + '-symbol'}
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+          placeholder="e.g. VOO"
+          maxLength={30}
+          required
+          aria-describedby={error ? id + '-error' : undefined}
+          aria-invalid={!!error}
+        />
+        <label className="form-label" htmlFor={id + '-kind'}>
+          Asset type
+        </label>
+        <select
+          id={id + '-kind'}
+          value={kind}
+          onChange={(e) => setKind(e.target.value as AssetKind)}
+        >
+          <option value="stock">Stock / ETF</option>
+          <option value="crypto">Crypto</option>
+          <option value="other">Other</option>
+        </select>
+        <div className="form-label">Current value</div>
+        <NumberField
+          label="New holding current value"
+          value={value}
+          prefix="$"
+          onChange={(amount) => setValue(amount ?? 0)}
+          onValidityChange={setValueValid}
+        />
+        <div className="form-label">Target weight</div>
+        <NumberField
+          label="New holding target"
+          value={target}
+          max={100}
+          suffix="%"
+          onChange={(v) => setTarget(v ?? 0)}
+          onValidityChange={setTargetValid}
+        />
+        {error && (
+          <p className="field-error" id={id + '-error'} role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="button secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            disabled={!symbol.trim() || !valueValid || !targetValid}
+          >
+            Add holding
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
-};
-
-export default AddAsset;
+}
