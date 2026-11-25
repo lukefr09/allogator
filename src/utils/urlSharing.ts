@@ -1,127 +1,153 @@
-import { Asset } from '../types';
+import type { Asset, Portfolio } from '../types';
+import { createAsset } from './portfolio';
+import {
+  getValueCents,
+  isBounded,
+  MAX_ASSETS,
+  MAX_VALUE,
+  SYMBOL_PATTERN,
+  toBasisPoints,
+} from './validation';
 
-// Define types for encoded data
-interface EncodedAsset {
-  s: string;
-  v: number;
-  t: number;
-  p?: number;
-  sh?: number;
-  ns?: boolean; // noSell flag
+export const DRAFT_KEY = 'allogator.portfolio.v2';
+type RecordValue = Record<string, unknown>;
+function record(value: unknown): value is RecordValue {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function fail(): never {
+  throw new Error(
+    'This portfolio could not be opened. Check the link or start a new portfolio.',
+  );
 }
 
-interface EncodedPortfolio {
-  assets: EncodedAsset[];
-  m: number;
-  es?: boolean; // enableSelling flag
+export function serializePortfolio(portfolio: Portfolio): string {
+  return JSON.stringify({
+    version: 2,
+    money: portfolio.newMoney,
+    selling: portfolio.enableSelling,
+    assets: portfolio.assets.map((a) => ({
+      symbol: a.symbol,
+      kind: a.kind,
+      basis: a.basis,
+      value: a.currentValue,
+      shares: a.shares,
+      target: toBasisPoints(a.targetPercentage),
+      price: a.currentPrice,
+      noSell: a.noSell,
+      quoteTime: a.quoteTime,
+    })),
+  });
 }
 
-// Validation helper
-const isValidAsset = (asset: any): asset is EncodedAsset => {
-  if (!asset || typeof asset !== 'object') return false;
-  
-  // Validate types
-  if (typeof asset.s !== 'string' || 
-      typeof asset.v !== 'number' || 
-      typeof asset.t !== 'number') {
-    return false;
-  }
-  
-  // Validate ranges
-  if (asset.s.length > 30 || asset.s.length === 0) return false;
-  if (asset.v < 0 || asset.v > 1000000000) return false; // Max $1B
-  if (asset.t < 0 || asset.t > 1) return false;
-  if (asset.p !== undefined && (typeof asset.p !== 'number' || asset.p < 0)) return false;
-  if (asset.sh !== undefined && (typeof asset.sh !== 'number' || asset.sh < 0)) return false;
-  if (asset.ns !== undefined && typeof asset.ns !== 'boolean') return false;
-  
-  // Validate symbol format - allow colons for exchange:symbol format
-  if (!/^[A-Z0-9\-\.:]{1,30}$/.test(asset.s)) return false;
-  
-  return true;
-};
+export function parsePortfolio(
+  raw: string,
+  mode: 'snapshot' | 'legacy' | 'draft' = 'snapshot',
+): Portfolio {
+  const legacy = mode === 'legacy';
+  if (raw.length > 30_000) fail();
+  const data: unknown = JSON.parse(raw);
+  if (
+    !record(data) ||
+    (!legacy && data.version !== 2) ||
+    !Array.isArray(data.assets) ||
+    data.assets.length > MAX_ASSETS
+  )
+    fail();
+  const money = legacy ? data.m : data.money;
+  const selling = legacy ? (data.es ?? false) : data.selling;
+  if (
+    !isBounded(money) ||
+    Math.abs(money * 100 - Math.round(money * 100)) > 0.0001 ||
+    typeof selling !== 'boolean'
+  )
+    fail();
+  const assets: Asset[] = data.assets.map((item: unknown) => {
+    if (!record(item)) fail();
+    const symbol = legacy ? item.s : item.symbol;
+    const value = legacy ? item.v : item.value;
+    const target =
+      legacy && typeof item.t === 'number' ? item.t * 10_000 : item.target;
+    const price = legacy ? item.p : item.price;
+    const shares = (legacy ? item.sh : item.shares) ?? 0;
+    const kind = legacy
+      ? typeof symbol === 'string' && symbol.includes(':')
+        ? 'crypto'
+        : 'stock'
+      : item.kind;
+    const basis = legacy ? 'value' : item.basis;
+    const noSell = (legacy ? item.ns : item.noSell) ?? false;
+    if (
+      typeof symbol !== 'string' ||
+      !SYMBOL_PATTERN.test(symbol) ||
+      !isBounded(value) ||
+      Math.abs(value * 100 - Math.round(value * 100)) > 0.0001 ||
+      !isBounded(target, 10_000) ||
+      Math.abs(target - Math.round(target)) > 0.000001 ||
+      !isBounded(shares, 1e12) ||
+      typeof noSell !== 'boolean' ||
+      (kind !== 'stock' && kind !== 'crypto' && kind !== 'other') ||
+      (basis !== 'value' && basis !== 'shares') ||
+      (price !== undefined && (!isBounded(price) || price <= 0))
+    )
+      fail();
+    if (
+      item.quoteTime !== undefined &&
+      (typeof item.quoteTime !== 'string' ||
+        !Number.isFinite(Date.parse(item.quoteTime)))
+    )
+      fail();
+    const asset = createAsset({
+      symbol,
+      kind: kind as Asset['kind'],
+      basis: basis as Asset['basis'],
+      currentValue: value,
+      shares,
+      targetPercentage: Math.round(target) / 10_000,
+      currentPrice: price as number | undefined,
+      priceSource: price === undefined ? undefined : 'snapshot',
+      quoteTime: item.quoteTime as string | undefined,
+      noSell,
+    });
+    if (mode !== 'draft' && getValueCents(asset) > MAX_VALUE * 100) fail();
+    return asset;
+  });
+  if (
+    mode !== 'draft' &&
+    new Set(assets.map((a) => a.kind + ':' + a.symbol)).size !== assets.length
+  )
+    fail();
+  return { assets, newMoney: money, enableSelling: selling };
+}
 
-export const encodePortfolioToUrl = (assets: Asset[], newMoney: number, enableSelling: boolean = false): string => {
-  const data: EncodedPortfolio = {
-    assets: assets.map(a => {
-      const encoded: EncodedAsset = {
-        s: a.symbol,
-        v: a.currentValue,
-        t: a.targetPercentage
-      };
-      if (a.currentPrice !== undefined) encoded.p = a.currentPrice;
-      if (a.shares !== undefined) encoded.sh = a.shares;
-      if (a.noSell) encoded.ns = true; // Only include if true to save space
-      return encoded;
-    }),
-    m: newMoney
-  };
-  
-  // Only include enableSelling if true to save space
-  if (enableSelling) {
-    data.es = true;
-  }
-  
-  const encoded = btoa(JSON.stringify(data));
-  return `${window.location.origin}${window.location.pathname}?p=${encoded}`;
-};
-
-export const decodePortfolioFromUrl = (): { assets: Asset[], newMoney: number, enableSelling: boolean } | null => {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get('p');
-  
-  if (!encoded) return null;
-  
+export function encodePortfolioToUrl(
+  portfolio: Portfolio,
+  base = window.location.href,
+): string {
+  const url = new URL(base);
+  url.search = '';
+  url.hash =
+    'p=' +
+    btoa(serializePortfolio(portfolio))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  return url.toString();
+}
+export function decodePortfolioFromUrl(
+  href = window.location.href,
+): Portfolio | null {
+  const url = new URL(href);
+  const fragment = new URLSearchParams(url.hash.slice(1)).get('p');
+  const old = url.searchParams.get('p');
+  if (fragment === null && old === null) return null;
   try {
-    const decoded = JSON.parse(atob(encoded)) as EncodedPortfolio;
-    
-    // Validate structure
-    if (!decoded || typeof decoded !== 'object' || !Array.isArray(decoded.assets)) {
-      throw new Error('Invalid portfolio structure');
-    }
-    
-    // Validate new money
-    if (typeof decoded.m !== 'number' || decoded.m < 0 || decoded.m > 1000000000) {
-      throw new Error('Invalid new money amount');
-    }
-    
-    // Validate enableSelling
-    const enableSelling = decoded.es === true; // Default to false if not present
-    
-    // Validate and sanitize assets
-    const assets = decoded.assets
-      .filter(isValidAsset)
-      .slice(0, 20) // Max 20 assets
-      .map((a: EncodedAsset) => ({
-        symbol: a.s.trim().toUpperCase(),
-        currentValue: Math.max(0, Math.min(1000000000, a.v)),
-        targetPercentage: Math.max(0, Math.min(1, a.t)),
-        currentPrice: a.p ? Math.max(0, a.p) : undefined,
-        shares: a.sh ? Math.max(0, a.sh) : undefined,
-        noSell: a.ns === true // Default to false if not present
-      }));
-    
-    if (assets.length === 0) {
-      throw new Error('No valid assets found');
-    }
-    
-    return {
-      assets,
-      newMoney: Math.max(0, Math.min(1000000000, decoded.m)),
-      enableSelling
-    };
-  } catch (error) {
-    // Silent fail - don't log errors to console
-    return null;
+    const encoded = fragment ?? old!;
+    if (encoded.length > 40_000) fail();
+    return parsePortfolio(
+      atob(encoded.replace(/-/g, '+').replace(/_/g, '/')),
+      fragment === null ? 'legacy' : 'snapshot',
+    );
+  } catch {
+    return fail();
   }
-};
-
-export const copyToClipboard = async (text: string): Promise<boolean> => {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (error) {
-    // Silent fail - clipboard access denied
-    return false;
-  }
-};
+}
